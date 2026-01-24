@@ -6,23 +6,28 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MapPin, Calendar, Car, FileText, Loader2 } from 'lucide-react';
 import { Trip } from '@/types/mileage';
+import { Program } from '@/hooks/usePrograms';
+import { ProgramManager } from './ProgramManager';
 
 interface TripFormProps {
   onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
   onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string } | null>;
+  programs: Program[];
+  programsLoading: boolean;
+  onAddProgram: (name: string, address: string) => Promise<Program | null>;
+  onUpdateProgram: (id: string, updates: { name?: string; address?: string }) => Promise<boolean>;
+  onDeleteProgram: (id: string) => Promise<boolean>;
 }
 
-const PROGRAMS = [
-  'General Business',
-  'Client Visit',
-  'Training',
-  'Conference',
-  'Delivery',
-  'Site Inspection',
-  'Other',
-];
-
-export const TripForm = ({ onSubmit, onCalculateRoute }: TripFormProps) => {
+export const TripForm = ({
+  onSubmit,
+  onCalculateRoute,
+  programs,
+  programsLoading,
+  onAddProgram,
+  onUpdateProgram,
+  onDeleteProgram,
+}: TripFormProps) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [fromAddress, setFromAddress] = useState('');
   const [toAddress, setToAddress] = useState('');
@@ -32,9 +37,18 @@ export const TripForm = ({ onSubmit, onCalculateRoute }: TripFormProps) => {
   const [routeUrl, setRouteUrl] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
 
+  const handleProgramChange = (programName: string) => {
+    setProgram(programName);
+    // Auto-fill to address from program
+    const selectedProgram = programs.find((p) => p.name === programName);
+    if (selectedProgram?.address) {
+      setToAddress(selectedProgram.address);
+    }
+  };
+
   const handleCalculateRoute = async () => {
     if (!fromAddress || !toAddress) return;
-    
+
     setIsCalculating(true);
     try {
       const result = await onCalculateRoute(fromAddress, toAddress);
@@ -75,9 +89,18 @@ export const TripForm = ({ onSubmit, onCalculateRoute }: TripFormProps) => {
   return (
     <Card className="shadow-card animate-fade-in">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <Car className="h-5 w-5 text-primary" />
-          Add New Trip
+        <CardTitle className="flex items-center justify-between text-lg font-semibold">
+          <span className="flex items-center gap-2">
+            <Car className="h-5 w-5 text-primary" />
+            Add New Trip
+          </span>
+          <ProgramManager
+            programs={programs}
+            loading={programsLoading}
+            onAdd={onAddProgram}
+            onUpdate={onUpdateProgram}
+            onDelete={onDeleteProgram}
+          />
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -101,14 +124,14 @@ export const TripForm = ({ onSubmit, onCalculateRoute }: TripFormProps) => {
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 Program
               </Label>
-              <Select value={program} onValueChange={setProgram}>
+              <Select value={program} onValueChange={handleProgramChange}>
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Select program" />
+                  <SelectValue placeholder={programsLoading ? 'Loading...' : 'Select program'} />
                 </SelectTrigger>
                 <SelectContent>
-                  {PROGRAMS.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
+                  {programs.map((p) => (
+                    <SelectItem key={p.id} value={p.name}>
+                      {p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
