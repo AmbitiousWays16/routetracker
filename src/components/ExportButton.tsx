@@ -9,6 +9,8 @@ interface ExportButtonProps {
   totalMiles: number;
 }
 
+const MILEAGE_RATE = 0.75;
+
 export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -19,8 +21,60 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
     
     try {
       const currentMonth = format(new Date(), 'MMMM yyyy');
+      const reimbursement = totalMiles * MILEAGE_RATE;
       
-      // Create HTML content for the voucher
+      // Sort trips by date
+      const sortedTrips = [...trips].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      // Generate route map sections for each trip
+      const tripRouteSections = sortedTrips.map((trip, index) => {
+        const encodedFrom = encodeURIComponent(trip.fromAddress);
+        const encodedTo = encodeURIComponent(trip.toAddress);
+        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&markers=color:green%7Clabel:A%7C${encodedFrom}&markers=color:red%7Clabel:B%7C${encodedTo}&path=color:0x3b82f6%7Cweight:3%7C${encodedFrom}%7C${encodedTo}&key=`;
+        const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
+        
+        return `
+          <div class="trip-detail" style="page-break-inside: avoid; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+              <h3 style="margin: 0; color: #1a1a2e; font-size: 16px;">Trip ${index + 1}: ${format(new Date(trip.date), 'MMMM d, yyyy')}</h3>
+              <span style="background: #dbeafe; color: #3b82f6; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">${trip.miles.toFixed(1)} miles</span>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+              <div>
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">From</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.fromAddress}</p>
+              </div>
+              <div>
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">To</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.toAddress}</p>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+              <div>
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Business Purpose</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.businessPurpose}</p>
+              </div>
+              <div>
+                <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Program</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.program}</p>
+              </div>
+            </div>
+            <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
+              <a href="${directionsUrl}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 13px;">
+                📍 View Route on Google Maps →
+              </a>
+              <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8;">
+                ${trip.fromAddress} → ${trip.toAddress}
+              </p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Create HTML content for the comprehensive voucher
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -28,25 +82,124 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
           <title>Mileage Voucher - ${currentMonth}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; }
-            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; }
+            body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; line-height: 1.5; }
+            
+            .header { 
+              text-align: center; 
+              margin-bottom: 30px; 
+              border-bottom: 3px solid #3b82f6; 
+              padding-bottom: 20px; 
+            }
             .header h1 { color: #3b82f6; font-size: 28px; margin-bottom: 8px; }
             .header p { color: #64748b; font-size: 14px; }
-            .summary { display: flex; justify-content: space-between; margin-bottom: 30px; background: #f1f5f9; padding: 20px; border-radius: 8px; }
+            
+            .summary { 
+              display: flex; 
+              justify-content: space-around; 
+              margin-bottom: 30px; 
+              background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); 
+              padding: 25px; 
+              border-radius: 12px;
+              border: 1px solid #bfdbfe;
+            }
             .summary-item { text-align: center; }
-            .summary-item .value { font-size: 24px; font-weight: bold; color: #3b82f6; }
-            .summary-item .label { font-size: 12px; color: #64748b; margin-top: 4px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-            th { background: #3b82f6; color: white; padding: 12px 8px; text-align: left; font-size: 12px; }
-            td { padding: 12px 8px; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+            .summary-item .value { font-size: 28px; font-weight: bold; color: #1e40af; }
+            .summary-item .label { font-size: 12px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+            
+            .section-title {
+              font-size: 18px;
+              color: #1a1a2e;
+              margin: 30px 0 20px 0;
+              padding-bottom: 10px;
+              border-bottom: 2px solid #e2e8f0;
+            }
+            
+            table { 
+              width: 100%; 
+              border-collapse: collapse; 
+              margin-bottom: 30px;
+              font-size: 12px;
+            }
+            th { 
+              background: #3b82f6; 
+              color: white; 
+              padding: 12px 8px; 
+              text-align: left; 
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            td { 
+              padding: 12px 8px; 
+              border-bottom: 1px solid #e2e8f0; 
+            }
             tr:nth-child(even) { background: #f8fafc; }
-            .route-link { color: #3b82f6; text-decoration: none; font-size: 10px; }
-            .footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-            .signature-line { display: flex; justify-content: space-between; margin-top: 30px; }
-            .signature-box { width: 45%; }
-            .signature-box p { font-size: 12px; color: #64748b; border-top: 1px solid #1a1a2e; padding-top: 8px; margin-top: 50px; }
-            .total-row { font-weight: bold; background: #dbeafe !important; }
-            @media print { body { padding: 20px; } }
+            .total-row { 
+              font-weight: bold; 
+              background: #dbeafe !important; 
+              font-size: 13px;
+            }
+            
+            .signatures-section {
+              margin-top: 50px;
+              page-break-inside: avoid;
+            }
+            
+            .signature-grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 40px 60px;
+              margin-top: 20px;
+            }
+            
+            .signature-box {
+              border: 1px solid #e2e8f0;
+              border-radius: 8px;
+              padding: 20px;
+              background: #fafafa;
+            }
+            
+            .signature-box .title {
+              font-size: 12px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 40px;
+            }
+            
+            .signature-line {
+              border-top: 1px solid #1a1a2e;
+              padding-top: 8px;
+              display: flex;
+              justify-content: space-between;
+            }
+            
+            .signature-line span {
+              font-size: 11px;
+              color: #64748b;
+            }
+            
+            .accounting-box {
+              margin-top: 30px;
+              padding: 15px;
+              background: #fef3c7;
+              border: 1px solid #f59e0b;
+              border-radius: 8px;
+            }
+            
+            .accounting-box p {
+              font-size: 11px;
+              color: #92400e;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            
+            .page-break { page-break-before: always; }
+            
+            @media print { 
+              body { padding: 20px; }
+              .page-break { page-break-before: always; }
+            }
           </style>
         </head>
         <body>
@@ -65,28 +218,28 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               <div class="label">Total Miles</div>
             </div>
             <div class="summary-item">
-              <div class="value">$${(totalMiles * 0.75).toFixed(2)}</div>
-              <div class="label">Reimbursement (@ $0.75/mi)</div>
+              <div class="value">$${reimbursement.toFixed(2)}</div>
+              <div class="label">Reimbursement @ $${MILEAGE_RATE}/mi</div>
             </div>
           </div>
 
+          <h2 class="section-title">Trip Summary</h2>
           <table>
             <thead>
               <tr>
+                <th style="width: 10%">#</th>
                 <th style="width: 12%">Date</th>
-                <th style="width: 22%">From</th>
-                <th style="width: 22%">To</th>
-                <th style="width: 22%">Business Purpose</th>
+                <th style="width: 20%">From</th>
+                <th style="width: 20%">To</th>
+                <th style="width: 18%">Purpose</th>
                 <th style="width: 12%">Program</th>
-                <th style="width: 10%">Miles</th>
+                <th style="width: 8%">Miles</th>
               </tr>
             </thead>
             <tbody>
-              ${trips
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .map(
-                  (trip) => `
+              ${sortedTrips.map((trip, index) => `
                 <tr>
+                  <td>${index + 1}</td>
                   <td>${format(new Date(trip.date), 'MM/dd/yyyy')}</td>
                   <td>${trip.fromAddress}</td>
                   <td>${trip.toAddress}</td>
@@ -94,27 +247,61 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                   <td>${trip.program}</td>
                   <td>${trip.miles.toFixed(1)}</td>
                 </tr>
-              `
-                )
-                .join('')}
+              `).join('')}
               <tr class="total-row">
-                <td colspan="5" style="text-align: right; font-weight: bold;">TOTAL MILES:</td>
-                <td style="font-weight: bold;">${totalMiles.toFixed(1)}</td>
+                <td colspan="6" style="text-align: right;">TOTAL MILES:</td>
+                <td>${totalMiles.toFixed(1)}</td>
               </tr>
             </tbody>
           </table>
 
-          <div class="footer">
-            <p style="font-size: 12px; color: #64748b; margin-bottom: 10px;">FOR ACCOUNTING USE ONLY</p>
-            <div class="signature-line">
+          <div class="signatures-section">
+            <h2 class="section-title">Authorization Signatures</h2>
+            <div class="signature-grid">
               <div class="signature-box">
-                <p>Employee's Signature</p>
+                <div class="title">Employee</div>
+                <div class="signature-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
               </div>
               <div class="signature-box">
-                <p>Date</p>
+                <div class="title">Supervisor</div>
+                <div class="signature-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
+              </div>
+              <div class="signature-box">
+                <div class="title">Deputy Administrator / Vice President</div>
+                <div class="signature-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
+              </div>
+              <div class="signature-box">
+                <div class="title">Chief Operations Officer</div>
+                <div class="signature-line">
+                  <span>Signature</span>
+                  <span>Date</span>
+                </div>
               </div>
             </div>
+            
+            <div class="accounting-box">
+              <p>For Accounting Use Only</p>
+            </div>
           </div>
+
+          <div class="page-break"></div>
+          
+          <div class="header">
+            <h1>TRIP ROUTE DETAILS</h1>
+            <p>${currentMonth} - Individual Trip Documentation</p>
+          </div>
+
+          ${tripRouteSections}
+
         </body>
         </html>
       `;
