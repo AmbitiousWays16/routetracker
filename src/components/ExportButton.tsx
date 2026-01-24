@@ -65,8 +65,8 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               <div class="label">Total Miles</div>
             </div>
             <div class="summary-item">
-              <div class="value">$${(totalMiles * 0.67).toFixed(2)}</div>
-              <div class="label">Reimbursement (@ $0.67/mi)</div>
+              <div class="value">$${(totalMiles * 0.75).toFixed(2)}</div>
+              <div class="label">Reimbursement (@ $0.75/mi)</div>
             </div>
           </div>
 
