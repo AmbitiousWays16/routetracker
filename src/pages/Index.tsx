@@ -3,25 +3,23 @@ import { TripForm } from '@/components/TripForm';
 import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
 import { useTrips } from '@/hooks/useTrips';
+import { usePrograms } from '@/hooks/usePrograms';
 import { toast } from 'sonner';
 
 const Index = () => {
   const { trips, addTrip, deleteTrip, totalMiles } = useTrips();
+  const { programs, loading: programsLoading, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
     // Generate Google Maps embed URL for the route
     const encodedFrom = encodeURIComponent(from);
     const encodedTo = encodeURIComponent(to);
     
-    // Google Maps embed URL for directions
-    const routeUrl = `https://www.google.com/maps/embed/v1/directions?key=&origin=${encodedFrom}&destination=${encodedTo}&mode=driving`;
-    
     // Google Maps directions URL (for linking)
     const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
 
     // For demo purposes, calculate approximate distance
     // In production, you'd use the Google Maps Distance Matrix API
-    // This generates a random realistic distance for demonstration
     const estimatedMiles = Math.round((Math.random() * 30 + 5) * 10) / 10;
 
     toast.info(
@@ -53,7 +51,15 @@ const Index = () => {
         <MileageSummary trips={trips} totalMiles={totalMiles} />
         
         <div className="grid gap-6 lg:grid-cols-2">
-          <TripForm onSubmit={handleAddTrip} onCalculateRoute={handleCalculateRoute} />
+          <TripForm
+            onSubmit={handleAddTrip}
+            onCalculateRoute={handleCalculateRoute}
+            programs={programs}
+            programsLoading={programsLoading}
+            onAddProgram={addProgram}
+            onUpdateProgram={updateProgram}
+            onDeleteProgram={deleteProgram}
+          />
           <TripList trips={trips} onDelete={handleDeleteTrip} totalMiles={totalMiles} />
         </div>
       </main>
