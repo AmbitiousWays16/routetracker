@@ -8,10 +8,10 @@ interface MileageSummaryProps {
   totalMiles: number;
 }
 
-const IRS_RATE_2024 = 0.67; // IRS standard mileage rate for 2024
+const MILEAGE_RATE = 0.75; // Reimbursement rate per mile
 
 export const MileageSummary = ({ trips, totalMiles }: MileageSummaryProps) => {
-  const reimbursement = totalMiles * IRS_RATE_2024;
+  const reimbursement = totalMiles * MILEAGE_RATE;
   const currentMonth = format(new Date(), 'MMMM yyyy');
   const tripCount = trips.length;
 
