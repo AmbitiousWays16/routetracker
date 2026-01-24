@@ -1,168 +1,110 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
 
 export interface Program {
   id: string;
   name: string;
   address: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
 }
 
-const DEFAULT_PROGRAMS = [
-  { name: 'General Business', address: '' },
-  { name: 'Client Visit', address: '' },
-  { name: 'Training', address: '' },
-  { name: 'Conference', address: '' },
-  { name: 'Delivery', address: '' },
-  { name: 'Site Inspection', address: '' },
-  { name: 'Other', address: '' },
+const STORAGE_KEY = 'mileage-programs';
+
+const DEFAULT_PROGRAMS: Program[] = [
+  { id: '1', name: 'General Business', address: '' },
+  { id: '2', name: 'Client Visit', address: '' },
+  { id: '3', name: 'Training', address: '' },
+  { id: '4', name: 'Conference', address: '' },
+  { id: '5', name: 'Delivery', address: '' },
+  { id: '6', name: 'Site Inspection', address: '' },
+  { id: '7', name: 'Other', address: '' },
 ];
 
+const loadPrograms = (): Program[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : DEFAULT_PROGRAMS;
+  } catch {
+    return DEFAULT_PROGRAMS;
+  }
+};
+
+const savePrograms = (programs: Program[]) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(programs));
+};
+
 export const usePrograms = () => {
-  const { user } = useAuth();
-  const [programs, setPrograms] = useState<Program[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [programs, setPrograms] = useState<Program[]>(loadPrograms);
+  const [loading] = useState(false);
 
-  const fetchPrograms = useCallback(async () => {
-    if (!user) {
-      setPrograms([]);
-      setLoading(false);
-      return;
-    }
+  const addProgram = useCallback(async (name: string, address: string = ''): Promise<Program | null> => {
+    const trimmedName = name.trim();
+    if (!trimmedName) return null;
 
-    try {
-      const { data, error } = await supabase
-        .from('programs')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('name');
-
-      if (error) throw error;
-
-      // If no programs exist, create defaults
-      if (!data || data.length === 0) {
-        const defaultsToInsert = DEFAULT_PROGRAMS.map((p) => ({
-          name: p.name,
-          address: p.address,
-          user_id: user.id,
-        }));
-
-        const { data: inserted, error: insertError } = await supabase
-          .from('programs')
-          .insert(defaultsToInsert)
-          .select();
-
-        if (insertError) throw insertError;
-        setPrograms(inserted || []);
-      } else {
-        setPrograms(data);
-      }
-    } catch (error: any) {
-      console.error('Error fetching programs:', error);
-      toast.error('Failed to load programs');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchPrograms();
-  }, [fetchPrograms]);
-
-  const addProgram = async (name: string, address: string = '') => {
-    if (!user) return null;
-
-    try {
-      const { data, error } = await supabase
-        .from('programs')
-        .insert({ name: name.trim(), address: address.trim(), user_id: user.id })
-        .select()
-        .single();
-
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('A program with this name already exists');
-        } else {
-          throw error;
-        }
-        return null;
-      }
-
-      setPrograms((prev) => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-      toast.success('Program added');
-      return data;
-    } catch (error: any) {
-      console.error('Error adding program:', error);
-      toast.error('Failed to add program');
+    // Check for duplicate
+    if (programs.some((p) => p.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast.error('A program with this name already exists');
       return null;
     }
-  };
 
-  const updateProgram = async (id: string, updates: { name?: string; address?: string }) => {
-    if (!user) return false;
+    const newProgram: Program = {
+      id: crypto.randomUUID(),
+      name: trimmedName,
+      address: address.trim(),
+    };
 
-    try {
-      const { error } = await supabase
-        .from('programs')
-        .update({
-          ...(updates.name && { name: updates.name.trim() }),
-          ...(updates.address !== undefined && { address: updates.address.trim() }),
-        })
-        .eq('id', id)
-        .eq('user_id', user.id);
+    setPrograms((prev) => {
+      const updated = [...prev, newProgram].sort((a, b) => a.name.localeCompare(b.name));
+      savePrograms(updated);
+      return updated;
+    });
 
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('A program with this name already exists');
-        } else {
-          throw error;
-        }
-        return false;
-      }
+    toast.success('Program added');
+    return newProgram;
+  }, [programs]);
 
-      setPrograms((prev) =>
-        prev
-          .map((p) =>
-            p.id === id
-              ? { ...p, ...updates, name: updates.name?.trim() ?? p.name, address: updates.address?.trim() ?? p.address }
-              : p
-          )
-          .sort((a, b) => a.name.localeCompare(b.name))
-      );
-      toast.success('Program updated');
-      return true;
-    } catch (error: any) {
-      console.error('Error updating program:', error);
-      toast.error('Failed to update program');
+  const updateProgram = useCallback(async (id: string, updates: { name?: string; address?: string }): Promise<boolean> => {
+    const trimmedName = updates.name?.trim();
+
+    // Check for duplicate name
+    if (trimmedName && programs.some((p) => p.id !== id && p.name.toLowerCase() === trimmedName.toLowerCase())) {
+      toast.error('A program with this name already exists');
       return false;
     }
-  };
 
-  const deleteProgram = async (id: string) => {
-    if (!user) return false;
+    setPrograms((prev) => {
+      const updated = prev
+        .map((p) =>
+          p.id === id
+            ? {
+                ...p,
+                name: trimmedName ?? p.name,
+                address: updates.address?.trim() ?? p.address,
+              }
+            : p
+        )
+        .sort((a, b) => a.name.localeCompare(b.name));
+      savePrograms(updated);
+      return updated;
+    });
 
-    try {
-      const { error } = await supabase
-        .from('programs')
-        .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+    toast.success('Program updated');
+    return true;
+  }, [programs]);
 
-      if (error) throw error;
+  const deleteProgram = useCallback(async (id: string): Promise<boolean> => {
+    setPrograms((prev) => {
+      const updated = prev.filter((p) => p.id !== id);
+      savePrograms(updated);
+      return updated;
+    });
 
-      setPrograms((prev) => prev.filter((p) => p.id !== id));
-      toast.success('Program deleted');
-      return true;
-    } catch (error: any) {
-      console.error('Error deleting program:', error);
-      toast.error('Failed to delete program');
-      return false;
-    }
-  };
+    toast.success('Program deleted');
+    return true;
+  }, []);
+
+  const refetch = useCallback(() => {
+    setPrograms(loadPrograms());
+  }, []);
 
   return {
     programs,
@@ -170,6 +112,6 @@ export const usePrograms = () => {
     addProgram,
     updateProgram,
     deleteProgram,
-    refetch: fetchPrograms,
+    refetch,
   };
 };
