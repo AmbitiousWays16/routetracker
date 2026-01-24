@@ -8,6 +8,7 @@ import { MapPin, Calendar, Car, FileText, Loader2 } from 'lucide-react';
 import { Trip } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
+import { AddressAutocomplete } from './AddressAutocomplete';
 
 interface TripFormProps {
   onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
@@ -145,12 +146,12 @@ export const TripForm = ({
                 <MapPin className="h-3.5 w-3.5 text-success" />
                 From Address
               </Label>
-              <Input
+              <AddressAutocomplete
                 id="from"
                 placeholder="Enter starting address"
                 value={fromAddress}
-                onChange={(e) => setFromAddress(e.target.value)}
-                className="h-10"
+                onChange={setFromAddress}
+                programs={programs}
               />
             </div>
             <div className="space-y-2">
