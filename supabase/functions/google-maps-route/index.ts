@@ -1,9 +1,24 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS - restrict to known domains
+const allowedOrigins = [
+  'https://dumhzvkifwhvdgswplew.supabase.co',
+  'https://id-preview--2face1c8-df08-44c3-9a59-cc212f800657.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigin = origin && allowedOrigins.some(allowed => 
+    origin === allowed || origin.endsWith('.lovable.app')
+  ) ? origin : allowedOrigins[0];
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Credentials': 'true',
+  };
 };
 
 interface RouteRequest {
@@ -21,7 +36,51 @@ interface RouteResponse {
 // Maximum allowed length for addresses
 const MAX_ADDRESS_LENGTH = 500;
 
+// Rate limiting: 50 requests per minute per user
+const RATE_LIMIT_REQUESTS = 50;
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+
+// In-memory rate limit store (resets on function cold start)
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
+const checkRateLimit = (userId: string): { allowed: boolean; remaining: number; resetIn: number } => {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+  
+  // Clean up expired entries periodically
+  if (rateLimitMap.size > 1000) {
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (now > value.resetAt) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+  
+  if (!userLimit || now > userLimit.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: RATE_LIMIT_REQUESTS - 1, resetIn: RATE_LIMIT_WINDOW_MS };
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_REQUESTS) {
+    return { 
+      allowed: false, 
+      remaining: 0, 
+      resetIn: Math.max(0, userLimit.resetAt - now) 
+    };
+  }
+  
+  userLimit.count++;
+  return { 
+    allowed: true, 
+    remaining: RATE_LIMIT_REQUESTS - userLimit.count, 
+    resetIn: Math.max(0, userLimit.resetAt - now) 
+  };
+};
+
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -55,8 +114,30 @@ serve(async (req) => {
       );
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = claimsData.claims.sub as string;
     console.log(`Authenticated user: ${userId}`);
+
+    // === Rate Limiting Check ===
+    const rateLimit = checkRateLimit(userId);
+    if (!rateLimit.allowed) {
+      console.warn(`Rate limit exceeded for user ${userId}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded. Please try again later.',
+          retryAfter: Math.ceil(rateLimit.resetIn / 1000)
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(Math.ceil(rateLimit.resetIn / 1000)),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetIn / 1000))
+          } 
+        }
+      );
+    }
 
     // === API Key Check ===
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
@@ -155,8 +236,16 @@ serve(async (req) => {
     const encodedTo = encodeURIComponent(trimmedTo);
     const routeUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
     
-    // Generate Static Maps URL with the actual route polyline
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&maptype=roadmap&path=enc:${encodeURIComponent(encodedPolyline)}&markers=color:green%7Clabel:A%7C${encodeURIComponent(leg.start_location.lat)},${encodeURIComponent(leg.start_location.lng)}&markers=color:red%7Clabel:B%7C${encodeURIComponent(leg.end_location.lat)},${encodeURIComponent(leg.end_location.lng)}&key=${apiKey}`;
+    // Generate Static Maps URL through our proxy to hide the API key
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const staticMapParams = new URLSearchParams({
+      polyline: encodedPolyline,
+      startLat: String(leg.start_location.lat),
+      startLng: String(leg.start_location.lng),
+      endLat: String(leg.end_location.lat),
+      endLng: String(leg.end_location.lng),
+    });
+    const staticMapUrl = `${supabaseUrl}/functions/v1/static-map-proxy?${staticMapParams.toString()}`;
 
     const response: RouteResponse = {
       miles,
@@ -169,13 +258,20 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify(response),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetIn / 1000))
+        } 
+      }
     );
   } catch (error) {
     console.error('Error calculating route:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to calculate route' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...getCorsHeaders(req.headers.get('Origin')), 'Content-Type': 'application/json' } }
     );
   }
 });
