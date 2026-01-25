@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,9 @@ interface RouteResponse {
   encodedPolyline?: string;
 }
 
+// Maximum allowed length for addresses
+const MAX_ADDRESS_LENGTH = 500;
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -24,6 +28,37 @@ serve(async (req) => {
   }
 
   try {
+    // === Authentication Check ===
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('Missing or invalid Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token);
+    
+    if (authError || !claimsData?.claims) {
+      console.error('Authentication failed:', authError?.message || 'Invalid token');
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log(`Authenticated user: ${userId}`);
+
+    // === API Key Check ===
     const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
     if (!apiKey) {
       console.error('GOOGLE_MAPS_API_KEY not configured');
@@ -33,8 +68,20 @@ serve(async (req) => {
       );
     }
 
-    const { fromAddress, toAddress }: RouteRequest = await req.json();
+    // === Parse and Validate Input ===
+    let body: RouteRequest;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
+    const { fromAddress, toAddress } = body;
+
+    // Check for required fields
     if (!fromAddress || !toAddress) {
       return new Response(
         JSON.stringify({ error: 'Both fromAddress and toAddress are required' }),
@@ -42,12 +89,38 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Calculating route from "${fromAddress}" to "${toAddress}"`);
+    // Validate types
+    if (typeof fromAddress !== 'string' || typeof toAddress !== 'string') {
+      return new Response(
+        JSON.stringify({ error: 'Addresses must be strings' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Trim and validate length
+    const trimmedFrom = fromAddress.trim();
+    const trimmedTo = toAddress.trim();
+
+    if (trimmedFrom.length === 0 || trimmedTo.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Addresses cannot be empty' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (trimmedFrom.length > MAX_ADDRESS_LENGTH || trimmedTo.length > MAX_ADDRESS_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Addresses must be less than ${MAX_ADDRESS_LENGTH} characters` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`Calculating route from "${trimmedFrom}" to "${trimmedTo}" for user ${userId}`);
 
     // Call Google Maps Directions API
     const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');
-    directionsUrl.searchParams.set('origin', fromAddress);
-    directionsUrl.searchParams.set('destination', toAddress);
+    directionsUrl.searchParams.set('origin', trimmedFrom);
+    directionsUrl.searchParams.set('destination', trimmedTo);
     directionsUrl.searchParams.set('mode', 'driving');
     directionsUrl.searchParams.set('key', apiKey);
 
@@ -78,8 +151,8 @@ serve(async (req) => {
     const encodedPolyline = route.overview_polyline.points;
     
     // Generate Google Maps directions URL for viewing
-    const encodedFrom = encodeURIComponent(fromAddress);
-    const encodedTo = encodeURIComponent(toAddress);
+    const encodedFrom = encodeURIComponent(trimmedFrom);
+    const encodedTo = encodeURIComponent(trimmedTo);
     const routeUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
     
     // Generate Static Maps URL with the actual route polyline
@@ -101,7 +174,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error calculating route:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to calculate route', details: String(error) }),
+      JSON.stringify({ error: 'Failed to calculate route' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
