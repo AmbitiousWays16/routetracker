@@ -11,6 +11,13 @@ interface ExportButtonProps {
 
 const MILEAGE_RATE = 0.75;
 
+// HTML escape function to prevent XSS in PDF generation
+const escapeHtml = (text: string): string => {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+};
+
 export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
   const [isExporting, setIsExporting] = useState(false);
 
@@ -42,8 +49,13 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
-      // Generate route map sections for each trip
+      // Generate route map sections for each trip (with XSS protection)
       const tripRouteSections = sortedTrips.map((trip, index) => {
+        const safeFromAddress = escapeHtml(trip.fromAddress);
+        const safeToAddress = escapeHtml(trip.toAddress);
+        const safePurpose = escapeHtml(trip.businessPurpose);
+        const safeProgram = escapeHtml(trip.program);
+        
         const encodedFrom = encodeURIComponent(trip.fromAddress);
         const encodedTo = encodeURIComponent(trip.toAddress);
         const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
@@ -57,26 +69,26 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
               <div>
                 <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">From</p>
-                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.fromAddress}</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${safeFromAddress}</p>
               </div>
               <div>
                 <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">To</p>
-                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.toAddress}</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${safeToAddress}</p>
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
               <div>
                 <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Business Purpose</p>
-                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.businessPurpose}</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${safePurpose}</p>
               </div>
               <div>
                 <p style="margin: 0 0 4px 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Program</p>
-                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${trip.program}</p>
+                <p style="margin: 0; font-size: 13px; color: #1a1a2e;">${safeProgram}</p>
               </div>
             </div>
             <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
               ${trip.staticMapUrl ? `
-                <img src="${trip.staticMapUrl}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
+                <img src="${escapeHtml(trip.staticMapUrl)}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
               ` : `
                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
               `}
@@ -84,7 +96,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                 📍 View Route on Google Maps →
               </a>
               <p style="margin: 8px 0 0 0; font-size: 11px; color: #94a3b8;">
-                ${trip.fromAddress} → ${trip.toAddress}
+                ${safeFromAddress} → ${safeToAddress}
               </p>
             </div>
           </div>
@@ -280,10 +292,10 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                 <tr>
                   <td>${index + 1}</td>
                   <td>${format(new Date(trip.date), 'MM/dd/yyyy')}</td>
-                  <td>${trip.fromAddress}</td>
-                  <td>${trip.toAddress}</td>
-                  <td>${trip.businessPurpose}</td>
-                  <td>${trip.program}</td>
+                  <td>${escapeHtml(trip.fromAddress)}</td>
+                  <td>${escapeHtml(trip.toAddress)}</td>
+                  <td>${escapeHtml(trip.businessPurpose)}</td>
+                  <td>${escapeHtml(trip.program)}</td>
                   <td>${trip.miles.toFixed(1)}</td>
                 </tr>
               `).join('')}
