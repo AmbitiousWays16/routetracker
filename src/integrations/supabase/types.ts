@@ -65,6 +65,51 @@ export type Database = {
         }
         Relationships: []
       }
+      trips: {
+        Row: {
+          created_at: string
+          date: string
+          from_address: string
+          id: string
+          miles: number
+          program: string
+          purpose: string
+          route_url: string | null
+          static_map_url: string | null
+          to_address: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          from_address: string
+          id?: string
+          miles?: number
+          program: string
+          purpose?: string
+          route_url?: string | null
+          static_map_url?: string | null
+          to_address: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          from_address?: string
+          id?: string
+          miles?: number
+          program?: string
+          purpose?: string
+          route_url?: string | null
+          static_map_url?: string | null
+          to_address?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
