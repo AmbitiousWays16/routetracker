@@ -12,7 +12,7 @@ import { AddressAutocomplete } from './AddressAutocomplete';
 
 interface TripFormProps {
   onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
-  onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string } | null>;
+  onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; staticMapUrl?: string } | null>;
   programs: Program[];
   programsLoading: boolean;
   onAddProgram: (name: string, address: string) => Promise<Program | null>;
@@ -36,6 +36,7 @@ export const TripForm = ({
   const [program, setProgram] = useState('');
   const [miles, setMiles] = useState<number>(0);
   const [routeUrl, setRouteUrl] = useState('');
+  const [staticMapUrl, setStaticMapUrl] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
 
   const handleProgramChange = (programName: string) => {
@@ -56,6 +57,7 @@ export const TripForm = ({
       if (result) {
         setMiles(result.miles);
         setRouteUrl(result.routeUrl);
+        setStaticMapUrl(result.staticMapUrl || '');
       }
     } finally {
       setIsCalculating(false);
@@ -74,6 +76,7 @@ export const TripForm = ({
       program,
       miles,
       routeUrl,
+      staticMapUrl,
     });
 
     // Reset form
@@ -83,6 +86,7 @@ export const TripForm = ({
     setProgram('');
     setMiles(0);
     setRouteUrl('');
+    setStaticMapUrl('');
   };
 
   const isValid = date && fromAddress && toAddress && businessPurpose && program && miles > 0;
@@ -194,18 +198,18 @@ export const TripForm = ({
             )}
           </div>
 
-          {routeUrl && (
+          {staticMapUrl && (
             <div className="overflow-hidden rounded-lg border">
-              <iframe
-                src={routeUrl}
-                width="100%"
-                height="200"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                title="Route Map"
-              />
+              <a href={routeUrl} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={staticMapUrl}
+                  alt="Route Map"
+                  className="h-auto w-full"
+                />
+              </a>
+              <div className="bg-muted p-2 text-center text-sm text-muted-foreground">
+                Click to view directions on Google Maps
+              </div>
             </div>
           )}
 
