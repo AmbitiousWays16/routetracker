@@ -207,6 +207,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         </head>
         <body>
           <div class="header">
+            <img src="/images/westcare-logo.png" alt="WestCare California" style="height: 80px; margin-bottom: 15px;" />
             <h1>MILEAGE VOUCHER</h1>
             <p>${currentMonth} • Submit by the 10th of the following month</p>
           </div>
@@ -299,6 +300,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
           <div class="page-break"></div>
           
           <div class="header">
+            <img src="/images/westcare-logo.png" alt="WestCare California" style="height: 60px; margin-bottom: 10px;" />
             <h1>TRIP ROUTE DETAILS</h1>
             <p>${currentMonth} - Individual Trip Documentation</p>
           </div>
