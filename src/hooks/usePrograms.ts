@@ -13,19 +13,36 @@ export const usePrograms = () => {
   const { user } = useAuth();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const fetchPrograms = useCallback(async () => {
+  const checkAdminStatus = useCallback(async () => {
     if (!user) {
-      setPrograms([]);
-      setLoading(false);
+      setIsAdmin(false);
       return;
     }
 
     try {
       const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'admin')
+        .maybeSingle();
+
+      if (error) throw error;
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
+  }, [user]);
+
+  const fetchPrograms = useCallback(async () => {
+    try {
+      // Fetch all programs (shared for all users)
+      const { data, error } = await supabase
         .from('programs')
         .select('*')
-        .eq('user_id', user.id)
         .order('name');
 
       if (error) throw error;
@@ -43,15 +60,21 @@ export const usePrograms = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     fetchPrograms();
-  }, [fetchPrograms]);
+    checkAdminStatus();
+  }, [fetchPrograms, checkAdminStatus]);
 
   const addProgram = useCallback(async (name: string, address: string = ''): Promise<Program | null> => {
     if (!user) {
       toast.error('You must be logged in to add programs');
+      return null;
+    }
+
+    if (!isAdmin) {
+      toast.error('Only admins can add programs');
       return null;
     }
 
@@ -97,10 +120,15 @@ export const usePrograms = () => {
       toast.error('Failed to add program');
       return null;
     }
-  }, [user, programs]);
+  }, [user, programs, isAdmin]);
 
   const updateProgram = useCallback(async (id: string, updates: { name?: string; address?: string }): Promise<boolean> => {
     if (!user) return false;
+
+    if (!isAdmin) {
+      toast.error('Only admins can update programs');
+      return false;
+    }
 
     const trimmedName = updates.name?.trim();
 
@@ -123,8 +151,7 @@ export const usePrograms = () => {
       const { error } = await supabase
         .from('programs')
         .update(dbUpdates)
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -140,17 +167,21 @@ export const usePrograms = () => {
       toast.error('Failed to update program');
       return false;
     }
-  }, [user, programs]);
+  }, [user, programs, isAdmin]);
 
   const deleteProgram = useCallback(async (id: string): Promise<boolean> => {
     if (!user) return false;
+
+    if (!isAdmin) {
+      toast.error('Only admins can delete programs');
+      return false;
+    }
 
     try {
       const { error } = await supabase
         .from('programs')
         .delete()
-        .eq('id', id)
-        .eq('user_id', user.id);
+        .eq('id', id);
 
       if (error) throw error;
 
@@ -162,11 +193,12 @@ export const usePrograms = () => {
       toast.error('Failed to delete program');
       return false;
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   return {
     programs,
     loading,
+    isAdmin,
     addProgram,
     updateProgram,
     deleteProgram,

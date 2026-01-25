@@ -15,6 +15,7 @@ interface TripFormProps {
   onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; staticMapUrl?: string } | null>;
   programs: Program[];
   programsLoading: boolean;
+  isAdmin: boolean;
   onAddProgram: (name: string, address: string) => Promise<Program | null>;
   onUpdateProgram: (id: string, updates: { name?: string; address?: string }) => Promise<boolean>;
   onDeleteProgram: (id: string) => Promise<boolean>;
@@ -25,6 +26,7 @@ export const TripForm = ({
   onCalculateRoute,
   programs,
   programsLoading,
+  isAdmin,
   onAddProgram,
   onUpdateProgram,
   onDeleteProgram,
@@ -99,13 +101,15 @@ export const TripForm = ({
             <Car className="h-5 w-5 text-primary" />
             Add New Trip
           </span>
-          <ProgramManager
-            programs={programs}
-            loading={programsLoading}
-            onAdd={onAddProgram}
-            onUpdate={onUpdateProgram}
-            onDelete={onDeleteProgram}
-          />
+          {isAdmin && (
+            <ProgramManager
+              programs={programs}
+              loading={programsLoading}
+              onAdd={onAddProgram}
+              onUpdate={onUpdateProgram}
+              onDelete={onDeleteProgram}
+            />
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent>
