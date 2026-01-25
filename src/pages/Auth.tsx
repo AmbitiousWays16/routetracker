@@ -78,7 +78,7 @@ const Auth = () => {
             />
           </div>
           <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
-          <CardDescription>Track your business mileage for reimbursement</CardDescription>
+          <CardDescription>Track your WestCare mileage for reimbursement</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
