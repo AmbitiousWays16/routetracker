@@ -4,6 +4,7 @@ import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Index = () => {
@@ -11,26 +12,35 @@ const Index = () => {
   const { programs, loading: programsLoading, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
-    // Generate Google Maps embed URL for the route
-    const encodedFrom = encodeURIComponent(from);
-    const encodedTo = encodeURIComponent(to);
-    
-    // Google Maps directions URL (for linking)
-    const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
+    try {
+      const { data, error } = await supabase.functions.invoke('google-maps-route', {
+        body: { fromAddress: from, toAddress: to },
+      });
 
-    // For demo purposes, calculate approximate distance
-    // In production, you'd use the Google Maps Distance Matrix API
-    const estimatedMiles = Math.round((Math.random() * 30 + 5) * 10) / 10;
+      if (error) {
+        console.error('Route calculation error:', error);
+        toast.error('Failed to calculate route. Please try again.');
+        return null;
+      }
 
-    toast.info(
-      'Route calculated! In production, this would use Google Maps API for accurate distances.',
-      { duration: 4000 }
-    );
+      if (data.error) {
+        console.error('Route API error:', data.error);
+        toast.error(data.error);
+        return null;
+      }
 
-    return {
-      miles: estimatedMiles,
-      routeUrl: directionsUrl,
-    };
+      toast.success(`Route calculated: ${data.miles} miles`);
+
+      return {
+        miles: data.miles,
+        routeUrl: data.routeUrl,
+        staticMapUrl: data.staticMapUrl,
+      };
+    } catch (error) {
+      console.error('Error calculating route:', error);
+      toast.error('Failed to calculate route. Please check the addresses.');
+      return null;
+    }
   };
 
   const handleAddTrip = (tripData: Parameters<typeof addTrip>[0]) => {

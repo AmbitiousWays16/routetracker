@@ -7,6 +7,7 @@ export interface Trip {
   program: string;
   miles: number;
   routeUrl?: string;
+  staticMapUrl?: string;
   createdAt: Date;
 }
 
