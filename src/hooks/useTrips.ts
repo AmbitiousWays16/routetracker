@@ -3,6 +3,7 @@ import { Trip } from '@/types/mileage';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { startOfMonth, endOfMonth, format } from 'date-fns';
 
 export const useTrips = () => {
   const { user } = useAuth();
@@ -17,10 +18,17 @@ export const useTrips = () => {
     }
 
     try {
+      // Get current month boundaries
+      const now = new Date();
+      const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+
       const { data, error } = await supabase
         .from('trips')
         .select('*')
         .eq('user_id', user.id)
+        .gte('date', monthStart)
+        .lte('date', monthEnd)
         .order('date', { ascending: false });
 
       if (error) throw error;
