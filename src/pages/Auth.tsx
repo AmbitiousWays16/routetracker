@@ -6,9 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Car, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
+import westcareLogo from '@/assets/westcare-auth-logo.png';
 
 const authSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -69,8 +70,12 @@ const Auth = () => {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Car className="h-6 w-6 text-primary" />
+          <div className="mx-auto mb-4">
+            <img 
+              src={westcareLogo} 
+              alt="WestCare California" 
+              className="h-32 w-auto mx-auto rounded-lg"
+            />
           </div>
           <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
           <CardDescription>Track your business mileage for reimbursement</CardDescription>
