@@ -105,16 +105,19 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               position: relative;
               text-align: center; 
               margin-bottom: 30px; 
-              padding: 30px 20px;
+              padding: 50px 20px;
               border-radius: 8px;
               overflow: hidden;
+              background: #d4e8f2;
             }
             .header .banner {
               position: absolute;
-              inset: 0;
+              top: 0;
+              left: 0;
               width: 100%;
               height: 100%;
-              object-fit: cover;
+              object-fit: contain;
+              object-position: left center;
               z-index: 0;
             }
             .header .header-content {
