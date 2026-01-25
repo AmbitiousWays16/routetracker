@@ -43,13 +43,15 @@ const Index = () => {
     }
   };
 
-  const handleAddTrip = (tripData: Parameters<typeof addTrip>[0]) => {
-    addTrip(tripData);
-    toast.success('Trip added successfully!');
+  const handleAddTrip = async (tripData: Parameters<typeof addTrip>[0]) => {
+    const result = await addTrip(tripData);
+    if (result) {
+      toast.success('Trip added successfully!');
+    }
   };
 
-  const handleDeleteTrip = (id: string) => {
-    deleteTrip(id);
+  const handleDeleteTrip = async (id: string) => {
+    await deleteTrip(id);
     toast.success('Trip deleted');
   };
 
