@@ -9,6 +9,34 @@ import { Trip } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
+import { z } from 'zod';
+import { toast } from 'sonner';
+
+// Input validation schema for trip form
+const tripFormSchema = z.object({
+  date: z.string()
+    .refine((val) => {
+      const date = new Date(val);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      return date <= today;
+    }, 'Date cannot be in the future'),
+  fromAddress: z.string()
+    .trim()
+    .min(1, 'From address is required')
+    .max(500, 'Address is too long (max 500 characters)'),
+  toAddress: z.string()
+    .trim()
+    .min(1, 'To address is required')
+    .max(500, 'Address is too long (max 500 characters)'),
+  businessPurpose: z.string()
+    .trim()
+    .min(1, 'Business purpose is required')
+    .max(500, 'Business purpose is too long (max 500 characters)'),
+  program: z.string()
+    .min(1, 'Program is required')
+    .max(200, 'Program name is too long'),
+});
 
 interface TripFormProps {
   onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
@@ -68,14 +96,32 @@ export const TripForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !fromAddress || !toAddress || !businessPurpose || !program) return;
-
-    onSubmit({
+    
+    // Validate all form inputs with Zod
+    const validation = tripFormSchema.safeParse({
       date,
       fromAddress,
       toAddress,
       businessPurpose,
       program,
+    });
+    
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+
+    if (miles <= 0) {
+      toast.error('Please calculate the route first');
+      return;
+    }
+
+    onSubmit({
+      date: validation.data.date,
+      fromAddress: validation.data.fromAddress,
+      toAddress: validation.data.toAddress,
+      businessPurpose: validation.data.businessPurpose,
+      program: validation.data.program,
       miles,
       routeUrl,
       staticMapUrl,
