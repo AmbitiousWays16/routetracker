@@ -23,14 +23,21 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       const currentMonth = format(new Date(), 'MMMM yyyy');
       const reimbursement = totalMiles * MILEAGE_RATE;
       
-      // Convert banner image to base64 for PDF embedding
-      const bannerResponse = await fetch('/images/westcare-banner.png');
-      const bannerBlob = await bannerResponse.blob();
-      const bannerBase64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(bannerBlob);
-      });
+      // Convert banner image to a data URL so it renders reliably inside the print window.
+      // (CSS background images often don't print unless the user enables "Background graphics".)
+      let bannerDataUrl = '';
+      try {
+        const bannerResponse = await fetch('/images/westcare-banner.png');
+        const bannerBlob = await bannerResponse.blob();
+        bannerDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(bannerBlob);
+        });
+      } catch {
+        // If the banner fails to load, we still generate the PDF without it.
+        bannerDataUrl = '';
+      }
       
       // Sort trips by date
       const sortedTrips = [...trips].sort(
@@ -97,11 +104,24 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; line-height: 1.5; }
             
             .header { 
+              position: relative;
               text-align: center; 
               margin-bottom: 30px; 
-              background: url('${bannerBase64}') center/cover no-repeat;
               padding: 30px 20px;
               border-radius: 8px;
+              overflow: hidden;
+            }
+            .header .banner {
+              position: absolute;
+              inset: 0;
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              z-index: 0;
+            }
+            .header .header-content {
+              position: relative;
+              z-index: 1;
             }
             .header h1 { color: #1a1a2e; font-size: 28px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
             .header p { color: #374151; font-size: 14px; font-weight: 500; }
@@ -212,13 +232,18 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             @media print { 
               body { padding: 20px; }
               .page-break { page-break-before: always; }
+              /* Hint to the browser to preserve colors where applicable */
+              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             }
           </style>
         </head>
         <body>
           <div class="header">
-            <h1>MILEAGE VOUCHER</h1>
-            <p>${currentMonth} • Submit by the 10th of the following month</p>
+            ${bannerDataUrl ? `<img class="banner" src="${bannerDataUrl}" alt="WestCare California banner" />` : ''}
+            <div class="header-content">
+              <h1>MILEAGE VOUCHER</h1>
+              <p>${currentMonth} • Submit by the 10th of the following month</p>
+            </div>
           </div>
           
           <div class="summary">
@@ -309,8 +334,11 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
           <div class="page-break"></div>
           
           <div class="header">
-            <h1>TRIP ROUTE DETAILS</h1>
-            <p>${currentMonth} - Individual Trip Documentation</p>
+            ${bannerDataUrl ? `<img class="banner" src="${bannerDataUrl}" alt="WestCare California banner" />` : ''}
+            <div class="header-content">
+              <h1>TRIP ROUTE DETAILS</h1>
+              <p>${currentMonth} - Individual Trip Documentation</p>
+            </div>
           </div>
 
           ${tripRouteSections}
