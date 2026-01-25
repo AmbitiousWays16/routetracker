@@ -23,6 +23,15 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       const currentMonth = format(new Date(), 'MMMM yyyy');
       const reimbursement = totalMiles * MILEAGE_RATE;
       
+      // Convert banner image to base64 for PDF embedding
+      const bannerResponse = await fetch('/images/westcare-banner.png');
+      const bannerBlob = await bannerResponse.blob();
+      const bannerBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(bannerBlob);
+      });
+      
       // Sort trips by date
       const sortedTrips = [...trips].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -90,7 +99,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             .header { 
               text-align: center; 
               margin-bottom: 30px; 
-              background: url('/images/westcare-banner.png') center/cover no-repeat;
+              background: url('${bannerBase64}') center/cover no-repeat;
               padding: 30px 20px;
               border-radius: 8px;
             }
