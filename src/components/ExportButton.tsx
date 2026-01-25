@@ -32,7 +32,6 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       const tripRouteSections = sortedTrips.map((trip, index) => {
         const encodedFrom = encodeURIComponent(trip.fromAddress);
         const encodedTo = encodeURIComponent(trip.toAddress);
-        const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?size=600x300&markers=color:green%7Clabel:A%7C${encodedFrom}&markers=color:red%7Clabel:B%7C${encodedTo}&path=color:0x3b82f6%7Cweight:3%7C${encodedFrom}%7C${encodedTo}&key=`;
         const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
         
         return `
@@ -62,7 +61,11 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               </div>
             </div>
             <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
-              <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
+              ${trip.staticMapUrl ? `
+                <img src="${trip.staticMapUrl}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
+              ` : `
+                <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
+              `}
               <a href="${directionsUrl}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 13px;">
                 📍 View Route on Google Maps →
               </a>
