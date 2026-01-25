@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const { trips, addTrip, deleteTrip, totalMiles } = useTrips();
-  const { programs, loading: programsLoading, addProgram, updateProgram, deleteProgram } = usePrograms();
+  const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
     try {
@@ -68,6 +68,7 @@ const Index = () => {
             onCalculateRoute={handleCalculateRoute}
             programs={programs}
             programsLoading={programsLoading}
+            isAdmin={isAdmin}
             onAddProgram={addProgram}
             onUpdateProgram={updateProgram}
             onDeleteProgram={deleteProgram}
