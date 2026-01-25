@@ -11,9 +11,24 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import westcareLogo from '@/assets/westcare-auth-logo.png';
 
+// Strong password validation schema
+const passwordSchema = z
+  .string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
+
 const authSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Please enter a valid email address').max(255, 'Email is too long'),
+  password: passwordSchema,
+});
+
+// Less strict validation for sign-in (we don't know what password rules existed when they signed up)
+const signInSchema = z.object({
+  email: z.string().email('Please enter a valid email address').max(255, 'Email is too long'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 const Auth = () => {
@@ -30,7 +45,9 @@ const Auth = () => {
   }, [user, loading, navigate]);
 
   const handleAuth = async (action: 'signin' | 'signup') => {
-    const validation = authSchema.safeParse({ email, password });
+    // Use strict validation for signup, relaxed for signin
+    const schema = action === 'signup' ? authSchema : signInSchema;
+    const validation = schema.safeParse({ email, password });
     if (!validation.success) {
       toast.error(validation.error.errors[0].message);
       return;
