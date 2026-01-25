@@ -90,11 +90,12 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             .header { 
               text-align: center; 
               margin-bottom: 30px; 
-              border-bottom: 3px solid #3b82f6; 
-              padding-bottom: 20px; 
+              background: url('/images/westcare-banner.png') center/cover no-repeat;
+              padding: 30px 20px;
+              border-radius: 8px;
             }
-            .header h1 { color: #3b82f6; font-size: 28px; margin-bottom: 8px; }
-            .header p { color: #64748b; font-size: 14px; }
+            .header h1 { color: #1a1a2e; font-size: 28px; margin-bottom: 8px; text-shadow: 0 1px 2px rgba(255,255,255,0.8); }
+            .header p { color: #374151; font-size: 14px; font-weight: 500; }
             
             .summary { 
               display: flex; 
@@ -207,7 +208,6 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         </head>
         <body>
           <div class="header">
-            <img src="/images/westcare-logo.png" alt="WestCare California" style="height: 80px; margin-bottom: 15px;" />
             <h1>MILEAGE VOUCHER</h1>
             <p>${currentMonth} • Submit by the 10th of the following month</p>
           </div>
@@ -300,7 +300,6 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
           <div class="page-break"></div>
           
           <div class="header">
-            <img src="/images/westcare-logo.png" alt="WestCare California" style="height: 60px; margin-bottom: 10px;" />
             <h1>TRIP ROUTE DETAILS</h1>
             <p>${currentMonth} - Individual Trip Documentation</p>
           </div>
