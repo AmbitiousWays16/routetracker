@@ -4,6 +4,7 @@ import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
 import { MonthSelector } from '@/components/MonthSelector';
 import { ArchivePromptDialog } from '@/components/ArchivePromptDialog';
+import { VoucherSubmitDialog } from '@/components/VoucherSubmitDialog';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,7 +64,16 @@ const Index = () => {
       <Header trips={trips} totalMiles={totalMiles} />
       
       <main className="container mx-auto space-y-6 px-4 py-6">
-        <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
+          {isCurrentMonth && (
+            <VoucherSubmitDialog 
+              selectedMonth={selectedMonth} 
+              trips={trips} 
+              totalMiles={totalMiles} 
+            />
+          )}
+        </div>
         <MileageSummary trips={trips} totalMiles={totalMiles} />
         
         <div className="grid gap-6 lg:grid-cols-2">
