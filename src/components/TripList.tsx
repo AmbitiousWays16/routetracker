@@ -9,20 +9,21 @@ interface TripListProps {
   trips: Trip[];
   onDelete: (id: string) => void;
   totalMiles: number;
+  isArchiveView?: boolean;
 }
 
-export const TripList = ({ trips, onDelete, totalMiles }: TripListProps) => {
+export const TripList = ({ trips, onDelete, totalMiles, isArchiveView = false }: TripListProps) => {
   const sortedTrips = [...trips].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   return (
-    <Card className="shadow-card animate-fade-in">
+    <Card className={`shadow-card animate-fade-in ${isArchiveView ? 'lg:col-span-2' : ''}`}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">
             <Car className="h-5 w-5 text-primary" />
-            Trip Log
+            {isArchiveView ? 'Archived Trip Log' : 'Trip Log'}
           </CardTitle>
           <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5">
             <span className="text-sm text-muted-foreground">Total:</span>
@@ -90,14 +91,16 @@ export const TripList = ({ trips, onDelete, totalMiles }: TripListProps) => {
                           </a>
                         </Button>
                       )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(trip.id)}
-                        className="h-8 w-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      {!isArchiveView && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDelete(trip.id)}
+                          className="h-8 w-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
