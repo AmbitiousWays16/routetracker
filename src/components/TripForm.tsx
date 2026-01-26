@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, Calendar, Car, FileText, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { Trip } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
@@ -68,6 +69,7 @@ export const TripForm = ({
   const [routeUrl, setRouteUrl] = useState('');
   const [staticMapUrl, setStaticMapUrl] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isRoundTrip, setIsRoundTrip] = useState(false);
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
@@ -116,6 +118,7 @@ export const TripForm = ({
       return;
     }
 
+    // Submit the outbound trip
     onSubmit({
       date: validation.data.date,
       fromAddress: validation.data.fromAddress,
@@ -127,6 +130,20 @@ export const TripForm = ({
       staticMapUrl,
     });
 
+    // If round trip, submit the return trip with swapped addresses
+    if (isRoundTrip) {
+      onSubmit({
+        date: validation.data.date,
+        fromAddress: validation.data.toAddress,
+        toAddress: validation.data.fromAddress,
+        businessPurpose: `${validation.data.businessPurpose} (Return)`,
+        program: validation.data.program,
+        miles,
+        routeUrl,
+        staticMapUrl,
+      });
+    }
+
     // Reset form
     setFromAddress('');
     setToAddress('');
@@ -135,6 +152,7 @@ export const TripForm = ({
     setMiles(0);
     setRouteUrl('');
     setStaticMapUrl('');
+    setIsRoundTrip(false);
   };
 
   const isValid = date && fromAddress && toAddress && businessPurpose && program && miles > 0;
@@ -273,6 +291,25 @@ export const TripForm = ({
               value={businessPurpose}
               onChange={(e) => setBusinessPurpose(e.target.value)}
               className="h-10"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <Label htmlFor="round-trip" className="text-sm font-medium cursor-pointer">
+                  Round Trip
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Automatically add return journey
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="round-trip"
+              checked={isRoundTrip}
+              onCheckedChange={setIsRoundTrip}
             />
           </div>
 
