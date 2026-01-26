@@ -237,16 +237,14 @@ serve(async (req) => {
     const encodedTo = encodeURIComponent(trimmedTo);
     const routeUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
     
-    // Generate Static Maps URL through our proxy to hide the API key
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const staticMapParams = new URLSearchParams({
-      polyline: encodedPolyline,
-      startLat: String(leg.start_location.lat),
-      startLng: String(leg.start_location.lng),
-      endLat: String(leg.end_location.lat),
-      endLng: String(leg.end_location.lng),
-    });
-    const staticMapUrl = `${supabaseUrl}/functions/v1/static-map-proxy?${staticMapParams.toString()}`;
+    // Generate Static Maps URL directly from Google Maps API
+    // This allows images to be displayed in the UI without auth headers
+    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
+      `size=600x300&maptype=roadmap` +
+      `&path=enc:${encodeURIComponent(encodedPolyline)}` +
+      `&markers=color:green|label:A|${leg.start_location.lat},${leg.start_location.lng}` +
+      `&markers=color:red|label:B|${leg.end_location.lat},${leg.end_location.lng}` +
+      `&key=${apiKey}`;
 
     const response: RouteResponse = {
       miles,
