@@ -15,10 +15,23 @@ const Index = () => {
   const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
+    console.log('Starting route calculation...', { from: from.substring(0, 20), to: to.substring(0, 20) });
+    
     try {
+      // Check if user session exists before making the request
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.error('No active session - user not authenticated');
+        toast.error('Please log in to calculate routes');
+        return null;
+      }
+      console.log('Session valid, making request...');
+
       const { data, error } = await supabase.functions.invoke('google-maps-route', {
         body: { fromAddress: from, toAddress: to },
       });
+
+      console.log('Route response received:', { hasData: !!data, hasError: !!error });
 
       if (error) {
         console.error('Route calculation error:', error);
@@ -26,7 +39,7 @@ const Index = () => {
         return null;
       }
 
-      if (data.error) {
+      if (data?.error) {
         console.error('Route API error:', data.error);
         toast.error(data.error);
         return null;
