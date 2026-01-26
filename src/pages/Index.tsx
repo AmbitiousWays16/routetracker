@@ -3,13 +3,14 @@ import { TripForm } from '@/components/TripForm';
 import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
 import { MonthSelector } from '@/components/MonthSelector';
+import { ArchivePromptDialog } from '@/components/ArchivePromptDialog';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Index = () => {
-  const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth } = useTrips();
+  const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth, refetch } = useTrips();
   const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
@@ -58,6 +59,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <ArchivePromptDialog onExportComplete={refetch} />
       <Header trips={trips} totalMiles={totalMiles} />
       
       <main className="container mx-auto space-y-6 px-4 py-6">
