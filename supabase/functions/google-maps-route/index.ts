@@ -116,7 +116,7 @@ serve(async (req) => {
     }
 
     const userId = user.id;
-    console.log(`Authenticated user: ${userId}`);
+    console.log("User authenticated successfully");
 
     // === Rate Limiting Check ===
     const rateLimit = checkRateLimit(userId);
@@ -197,7 +197,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Calculating route from "${trimmedFrom}" to "${trimmedTo}" for user ${userId}`);
+    console.log("Calculating route for authenticated user");
 
     // Call Google Maps Directions API
     const directionsUrl = new URL('https://maps.googleapis.com/maps/api/directions/json');

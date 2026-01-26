@@ -92,6 +92,42 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // === AUTHORIZATION CHECK ===
+    // Verify that the authenticated user has permission to trigger emails for this voucher
+    const { data: voucher, error: voucherError } = await supabase
+      .from('mileage_vouchers')
+      .select('user_id, status')
+      .eq('id', voucherId)
+      .maybeSingle();
+
+    if (voucherError || !voucher) {
+      return new Response(
+        JSON.stringify({ error: "Voucher not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if user is the voucher owner
+    const isOwner = voucher.user_id === user.id;
+
+    // Check if user has an approver role
+    const { data: userRoles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
+
+    const hasApproverRole = userRoles?.some(r => 
+      ['supervisor', 'vp', 'coo', 'admin'].includes(r.role)
+    );
+
+    // User must be either the voucher owner OR have an approver role
+    if (!isOwner && !hasApproverRole) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: You do not have permission to send notifications for this voucher" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const appUrl = Deno.env.get("APP_URL") || "https://routetracker.lovable.app";
     const approvalUrl = `${appUrl}/approvals?voucher=${voucherId}`;
 
@@ -172,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    console.log(`Sending ${action} email to ${recipientEmail} for voucher ${voucherId}`);
+    console.log(`Processing ${action} notification`);
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "WestCare Mileage Tracker <onboarding@resend.dev>",
@@ -186,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw emailError;
     }
 
-    console.log("Email sent successfully:", emailData);
+    console.log("Email notification sent successfully");
 
     return new Response(
       JSON.stringify({ success: true, messageId: emailData?.id }),
