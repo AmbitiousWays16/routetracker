@@ -3,14 +3,15 @@ import { Trip } from '@/types/mileage';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isSameMonth } from 'date-fns';
 
 export const useTrips = () => {
   const { user } = useAuth();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  const fetchTrips = useCallback(async () => {
+  const fetchTrips = useCallback(async (monthDate: Date = selectedMonth) => {
     if (!user) {
       setTrips([]);
       setLoading(false);
@@ -18,10 +19,10 @@ export const useTrips = () => {
     }
 
     try {
-      // Get current month boundaries
-      const now = new Date();
-      const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
-      const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+      setLoading(true);
+      // Get month boundaries for the selected month
+      const monthStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
 
       const { data, error } = await supabase
         .from('trips')
@@ -53,11 +54,17 @@ export const useTrips = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, selectedMonth]);
 
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    fetchTrips(selectedMonth);
+  }, [selectedMonth, user]);
+
+  const changeMonth = useCallback((newMonth: Date) => {
+    setSelectedMonth(newMonth);
+  }, []);
+
+  const isCurrentMonth = isSameMonth(selectedMonth, new Date());
 
   const addTrip = useCallback(async (trip: Omit<Trip, 'id' | 'createdAt'>) => {
     if (!user) {
@@ -97,14 +104,17 @@ export const useTrips = () => {
         createdAt: new Date(data.created_at),
       };
 
-      setTrips((prev) => [newTrip, ...prev]);
+      // Only add to local state if viewing current month
+      if (isCurrentMonth) {
+        setTrips((prev) => [newTrip, ...prev]);
+      }
       return newTrip;
     } catch (error) {
       console.error('Error adding trip:', error);
       toast.error('Failed to add trip');
       return null;
     }
-  }, [user]);
+  }, [user, isCurrentMonth]);
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
@@ -186,5 +196,8 @@ export const useTrips = () => {
     clearTrips,
     totalMiles,
     refetch: fetchTrips,
+    selectedMonth,
+    changeMonth,
+    isCurrentMonth,
   };
 };
