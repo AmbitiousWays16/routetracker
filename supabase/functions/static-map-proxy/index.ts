@@ -107,7 +107,7 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub as string;
-    console.log("Authenticated user:", userId);
+    console.log("User authenticated successfully");
 
     // =============================================
     // RATE LIMITING - Check user rate limit
@@ -197,7 +197,7 @@ serve(async (req) => {
       `&markers=color:red|label:B|${endLat},${endLng}` +
       `&key=${apiKey}`;
 
-    console.log("Fetching static map for authenticated user:", userId);
+    console.log("Fetching static map for authenticated user");
     
     const response = await fetch(staticMapUrl);
     
