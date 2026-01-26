@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, MapPin, Calendar, ExternalLink, Car } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 interface TripListProps {
   trips: Trip[];
@@ -54,7 +54,7 @@ export const TripList = ({ trips, onDelete, totalMiles, isArchiveView = false }:
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="flex items-center gap-1 text-sm text-muted-foreground">
                           <Calendar className="h-3.5 w-3.5" />
-                          {format(new Date(trip.date), 'MMM d, yyyy')}
+                          {format(parseISO(trip.date), 'MMM d, yyyy')}
                         </span>
                         <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                           {trip.program}
