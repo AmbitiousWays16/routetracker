@@ -322,10 +322,10 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
               min-width: 100px;
             }
             
-            .check-amount-row .amount-line {
-              flex: 1;
-              border-bottom: 1px solid #94a3b8;
-              min-height: 24px;
+            .check-amount-row .amount-value {
+              font-size: 18px;
+              font-weight: 700;
+              color: #1e3a5f;
             }
             
             .check-signoff {
@@ -443,7 +443,7 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
               <div class="title">Check Amount Sign-Off</div>
               <div class="check-amount-row">
                 <label>Check Amount:</label>
-                <div class="amount-line"></div>
+                <div class="amount-value">$${reimbursement.toFixed(2)}</div>
               </div>
               <div class="check-signoff">
                 <span>Accounting Signature</span>
