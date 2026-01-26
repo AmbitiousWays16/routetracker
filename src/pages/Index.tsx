@@ -2,13 +2,14 @@ import { Header } from '@/components/Header';
 import { TripForm } from '@/components/TripForm';
 import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
+import { MonthSelector } from '@/components/MonthSelector';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Index = () => {
-  const { trips, addTrip, deleteTrip, totalMiles } = useTrips();
+  const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth } = useTrips();
   const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
@@ -60,20 +61,28 @@ const Index = () => {
       <Header trips={trips} totalMiles={totalMiles} />
       
       <main className="container mx-auto space-y-6 px-4 py-6">
+        <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
         <MileageSummary trips={trips} totalMiles={totalMiles} />
         
         <div className="grid gap-6 lg:grid-cols-2">
-          <TripForm
-            onSubmit={handleAddTrip}
-            onCalculateRoute={handleCalculateRoute}
-            programs={programs}
-            programsLoading={programsLoading}
-            isAdmin={isAdmin}
-            onAddProgram={addProgram}
-            onUpdateProgram={updateProgram}
-            onDeleteProgram={deleteProgram}
+          {isCurrentMonth && (
+            <TripForm
+              onSubmit={handleAddTrip}
+              onCalculateRoute={handleCalculateRoute}
+              programs={programs}
+              programsLoading={programsLoading}
+              isAdmin={isAdmin}
+              onAddProgram={addProgram}
+              onUpdateProgram={updateProgram}
+              onDeleteProgram={deleteProgram}
+            />
+          )}
+          <TripList 
+            trips={trips} 
+            onDelete={handleDeleteTrip} 
+            totalMiles={totalMiles}
+            isArchiveView={!isCurrentMonth}
           />
-          <TripList trips={trips} onDelete={handleDeleteTrip} totalMiles={totalMiles} />
         </div>
       </main>
     </div>
