@@ -292,19 +292,53 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
               color: #64748b;
             }
             
-            .accounting-box {
+            .check-amount-box {
               margin-top: 30px;
-              padding: 15px;
-              background: #fef3c7;
-              border: 1px solid #f59e0b;
+              padding: 20px;
+              border: 2px solid #1e3a5f;
               border-radius: 8px;
+              background: #f8fafc;
             }
             
-            .accounting-box p {
-              font-size: 11px;
-              color: #92400e;
+            .check-amount-box .title {
+              font-size: 12px;
+              font-weight: 600;
+              color: #1e3a5f;
               text-transform: uppercase;
               letter-spacing: 0.5px;
+              margin-bottom: 15px;
+            }
+            
+            .check-amount-row {
+              display: flex;
+              align-items: center;
+              gap: 20px;
+              margin-bottom: 15px;
+            }
+            
+            .check-amount-row label {
+              font-size: 11px;
+              color: #64748b;
+              min-width: 100px;
+            }
+            
+            .check-amount-row .amount-line {
+              flex: 1;
+              border-bottom: 1px solid #94a3b8;
+              min-height: 24px;
+            }
+            
+            .check-signoff {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 20px;
+              padding-top: 15px;
+              border-top: 1px solid #e2e8f0;
+            }
+            
+            .check-signoff span {
+              font-size: 11px;
+              color: #64748b;
             }
             
             .page-break { page-break-before: always; }
@@ -405,8 +439,16 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
               </div>
             </div>
             
-            <div class="accounting-box">
-              <p>For Accounting Use Only</p>
+            <div class="check-amount-box">
+              <div class="title">Check Amount Sign-Off</div>
+              <div class="check-amount-row">
+                <label>Check Amount:</label>
+                <div class="amount-line"></div>
+              </div>
+              <div class="check-signoff">
+                <span>Accounting Signature</span>
+                <span>Date</span>
+              </div>
             </div>
           </div>
 
