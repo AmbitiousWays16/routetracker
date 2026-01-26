@@ -13,9 +13,7 @@ interface TripListProps {
 }
 
 export const TripList = ({ trips, onDelete, totalMiles, isArchiveView = false }: TripListProps) => {
-  const sortedTrips = [...trips].sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  // Trips are already sorted by date ascending from the database (earliest first)
 
   return (
     <Card className={`shadow-card animate-fade-in ${isArchiveView ? 'lg:col-span-2' : ''}`}>
@@ -45,7 +43,7 @@ export const TripList = ({ trips, onDelete, totalMiles, isArchiveView = false }:
         ) : (
           <ScrollArea className="h-[400px] pr-4">
             <div className="space-y-3">
-              {sortedTrips.map((trip, index) => (
+              {trips.map((trip, index) => (
                 <div
                   key={trip.id}
                   className="group rounded-lg border bg-card p-4 transition-all hover:shadow-md"
