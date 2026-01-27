@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -36,13 +37,73 @@ const Auth = () => {
   const { user, loading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSettingPassword, setIsSettingPassword] = useState(false);
 
   useEffect(() => {
-    if (user && !loading) {
+    // Check for password recovery/invite event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        // Check URL for invite or recovery tokens
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const type = hashParams.get('type');
+        
+        if (type === 'invite' || type === 'recovery' || event === 'PASSWORD_RECOVERY') {
+          setIsSettingPassword(true);
+          if (session?.user?.email) {
+            setEmail(session.user.email);
+          }
+        }
+      }
+    });
+
+    // Also check URL on initial load for invite/recovery tokens
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    if (type === 'invite' || type === 'recovery') {
+      setIsSettingPassword(true);
+    }
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    // Only redirect if user is authenticated AND not in password setting mode
+    if (user && !loading && !isSettingPassword) {
       navigate('/');
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isSettingPassword]);
+
+  const handleSetPassword = async () => {
+    const validation = passwordSchema.safeParse(password);
+    if (!validation.success) {
+      toast.error(validation.error.errors[0].message);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Password set successfully! You are now signed in.');
+        setIsSettingPassword(false);
+        // Clear the hash from URL
+        window.history.replaceState(null, '', window.location.pathname);
+        navigate('/');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleAuth = async (action: 'signin' | 'signup') => {
     // Use strict validation for signup, relaxed for signin
@@ -79,6 +140,72 @@ const Auth = () => {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show password setting form for invited users
+  if (isSettingPassword) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4">
+              <img 
+                src={westcareLogo} 
+                alt="WestCare California" 
+                className="h-32 w-auto mx-auto rounded-lg"
+              />
+            </div>
+            <CardTitle className="text-2xl">Set Your Password</CardTitle>
+            <CardDescription>
+              Welcome! Please create a password for your account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="set-email">Email</Label>
+              <Input
+                id="set-email"
+                type="email"
+                value={email}
+                disabled
+                className="bg-muted"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="set-password">New Password</Label>
+              <Input
+                id="set-password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Must be at least 8 characters with uppercase, lowercase, number, and special character.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
+            <Button
+              className="w-full"
+              onClick={handleSetPassword}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Set Password & Continue
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
