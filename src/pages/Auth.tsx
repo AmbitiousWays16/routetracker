@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,44 +34,45 @@ const signInSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, loading, signIn, signUp } = useAuth();
+  const { user, session, loading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const hasCheckedHash = useRef(false);
 
+  // Check URL hash for invite/recovery tokens on initial load only
   useEffect(() => {
-    // Check for password recovery/invite event
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        // Check URL for invite or recovery tokens
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const type = hashParams.get('type');
-        
-        if (type === 'invite' || type === 'recovery' || event === 'PASSWORD_RECOVERY') {
-          setIsSettingPassword(true);
-          if (session?.user?.email) {
-            setEmail(session.user.email);
-          }
-        }
+    if (hasCheckedHash.current) return;
+    hasCheckedHash.current = true;
+
+    const hash = window.location.hash;
+    if (hash) {
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const type = hashParams.get('type');
+      
+      if (type === 'invite' || type === 'recovery') {
+        setIsSettingPassword(true);
       }
-    });
-
-    // Also check URL on initial load for invite/recovery tokens
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const type = hashParams.get('type');
-    if (type === 'invite' || type === 'recovery') {
-      setIsSettingPassword(true);
     }
-
-    return () => subscription.unsubscribe();
   }, []);
 
+  // When session becomes available and we're in password setting mode, populate email
   useEffect(() => {
-    // Only redirect if user is authenticated AND not in password setting mode
+    if (session?.user?.email && isSettingPassword) {
+      setEmail(session.user.email);
+    }
+  }, [session, isSettingPassword]);
+
+  // Handle redirect for authenticated users (not in password setting mode)
+  useEffect(() => {
     if (user && !loading && !isSettingPassword) {
-      navigate('/');
+      // Use requestAnimationFrame to ensure React has finished its current render cycle
+      const frameId = requestAnimationFrame(() => {
+        navigate('/', { replace: true });
+      });
+      return () => cancelAnimationFrame(frameId);
     }
   }, [user, loading, navigate, isSettingPassword]);
 
@@ -98,7 +99,10 @@ const Auth = () => {
         setIsSettingPassword(false);
         // Clear the hash from URL
         window.history.replaceState(null, '', window.location.pathname);
-        navigate('/');
+        // Navigate after a brief delay to let state settle
+        requestAnimationFrame(() => {
+          navigate('/', { replace: true });
+        });
       }
     } finally {
       setIsSubmitting(false);
