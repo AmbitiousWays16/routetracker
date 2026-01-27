@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,7 +18,6 @@ const queryClient = new QueryClient();
 const TokenRedirectHandler = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     // Check URL hash for invite or recovery tokens
@@ -31,19 +30,9 @@ const TokenRedirectHandler = ({ children }: { children: React.ReactNode }) => {
       // If this is an invite or recovery link, redirect to /auth with the hash preserved
       if ((type === 'invite' || type === 'recovery') && accessToken && location.pathname !== '/auth') {
         navigate('/auth' + hash, { replace: true });
-        return;
       }
     }
-    setChecked(true);
   }, [navigate, location.pathname]);
-
-  if (!checked && window.location.hash.includes('type=invite')) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return <>{children}</>;
 };
