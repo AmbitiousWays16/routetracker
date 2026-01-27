@@ -16,6 +16,7 @@ const ASSIGNABLE_ROLES: { value: AppRole; label: string }[] = [
   { value: 'supervisor', label: 'Supervisor' },
   { value: 'vp', label: 'VP' },
   { value: 'coo', label: 'COO' },
+  { value: 'accountant', label: 'Accountant' },
 ];
 
 const getRoleBadgeVariant = (role: AppRole) => {
@@ -28,6 +29,8 @@ const getRoleBadgeVariant = (role: AppRole) => {
       return 'secondary';
     case 'supervisor':
       return 'outline';
+    case 'accountant':
+      return 'secondary';
     default:
       return 'outline';
   }
@@ -100,7 +103,7 @@ const UserManagement = () => {
               Manage User Roles
             </CardTitle>
             <CardDescription>
-              Assign supervisor, VP, or COO roles to users to enable the approval workflow.
+              Assign supervisor, VP, COO, or accountant roles to users to enable the approval workflow.
             </CardDescription>
           </CardHeader>
           <CardContent>

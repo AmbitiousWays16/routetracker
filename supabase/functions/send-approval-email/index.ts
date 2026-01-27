@@ -29,7 +29,7 @@ const getCorsHeaders = (origin: string | null) => {
 
 interface ApprovalEmailRequest {
   voucherId: string;
-  action: "submit" | "approve" | "reject";
+  action: "submit" | "approve" | "reject" | "final_approval";
   recipientEmail: string;
   recipientName?: string;
   employeeName: string;
@@ -55,6 +55,8 @@ const getStatusMessage = (action: string, nextRole?: string): string => {
     return `The mileage voucher has been approved and forwarded to the ${getRoleDisplayName(nextRole)} for the next level of approval.`;
   } else if (action === "approve") {
     return "Your mileage voucher has been fully approved!";
+  } else if (action === "final_approval") {
+    return "A mileage voucher has been fully approved and is ready for processing.";
   } else {
     return "Your mileage voucher has been returned for corrections.";
   }
@@ -162,6 +164,11 @@ const handler = async (req: Request): Promise<Response> => {
       heading = "Mileage Voucher Awaiting Your Approval";
       ctaText = "Review & Approve";
       ctaUrl = approvalUrl;
+    } else if (action === "final_approval") {
+      subject = `Mileage Voucher Ready for Processing - ${employeeName} (${month})`;
+      heading = "Approved Mileage Voucher Ready for Processing";
+      ctaText = "View Approved Voucher";
+      ctaUrl = `${appUrl}`;
     } else if (action === "approve") {
       subject = `Mileage Voucher Approved - ${month}`;
       heading = "Your Mileage Voucher Has Been Approved";
