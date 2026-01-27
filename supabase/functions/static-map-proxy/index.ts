@@ -9,11 +9,12 @@ const allowedOrigins = [
 ];
 
 const getCorsHeaders = (origin: string | null) => {
-  // Check if origin matches allowed patterns (including *.lovable.app)
+  // Check if origin matches allowed patterns (including *.lovable.app and *.lovableproject.com)
   const isAllowed = origin && (
     allowedOrigins.includes(origin) ||
     origin.endsWith('.lovable.app') ||
-    origin.endsWith('.lovable.dev')
+    origin.endsWith('.lovable.dev') ||
+    origin.endsWith('.lovableproject.com')
   );
   
   return {
