@@ -4,6 +4,7 @@ import { FileDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { fetchMapImageAsBase64 } from '@/lib/mapUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ExportButtonProps {
   trips: Trip[];
@@ -17,6 +18,24 @@ const escapeHtml = (text: string): string => {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+};
+
+// Fetch route data for legacy trips that don't have routeMapData
+const fetchRouteDataForLegacyTrip = async (fromAddress: string, toAddress: string): Promise<RouteMapData | null> => {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) return null;
+
+    const { data, error } = await supabase.functions.invoke('google-maps-route', {
+      body: { fromAddress, toAddress },
+      headers: { Authorization: `Bearer ${sessionData.session.access_token}` },
+    });
+
+    if (error || !data?.routeMapData) return null;
+    return data.routeMapData as RouteMapData;
+  } catch {
+    return null;
+  }
 };
 
 export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
@@ -51,9 +70,17 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       );
 
       // Fetch map images for all trips in parallel (secure server-side fetch)
+      // For legacy trips without routeMapData, fetch fresh route data first
       const mapImagesPromises = sortedTrips.map(async (trip) => {
-        if (trip.routeMapData) {
-          return await fetchMapImageAsBase64(trip.routeMapData);
+        let routeData = trip.routeMapData;
+        
+        // If no routeMapData, try to fetch it from addresses (legacy trip support)
+        if (!routeData) {
+          routeData = await fetchRouteDataForLegacyTrip(trip.fromAddress, trip.toAddress);
+        }
+        
+        if (routeData) {
+          return await fetchMapImageAsBase64(routeData);
         }
         return null;
       });
