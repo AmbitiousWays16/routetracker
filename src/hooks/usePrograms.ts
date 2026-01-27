@@ -64,8 +64,12 @@ export const usePrograms = () => {
 
   useEffect(() => {
     fetchPrograms();
+  }, [fetchPrograms]);
+
+  // Separate effect for admin status that re-runs when user changes
+  useEffect(() => {
     checkAdminStatus();
-  }, [fetchPrograms, checkAdminStatus]);
+  }, [checkAdminStatus, user]);
 
   const addProgram = useCallback(async (name: string, address: string = ''): Promise<Program | null> => {
     if (!user) {
