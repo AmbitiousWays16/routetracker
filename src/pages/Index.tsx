@@ -50,7 +50,7 @@ const Index = () => {
       return {
         miles: data.miles,
         routeUrl: data.routeUrl,
-        staticMapUrl: data.staticMapUrl,
+        routeMapData: data.routeMapData,
       };
     } catch (error) {
       console.error('Error calculating route:', error);

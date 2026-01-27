@@ -1,3 +1,11 @@
+export interface RouteMapData {
+  encodedPolyline: string;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+}
+
 export interface Trip {
   id: string;
   date: string;
@@ -7,7 +15,9 @@ export interface Trip {
   program: string;
   miles: number;
   routeUrl?: string;
+  /** @deprecated Use routeMapData instead - staticMapUrl exposed API keys */
   staticMapUrl?: string;
+  routeMapData?: RouteMapData;
   createdAt: Date;
 }
 
