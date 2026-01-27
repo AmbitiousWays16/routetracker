@@ -332,7 +332,7 @@ export const useApproverVouchers = () => {
 
       if (updateError) throw updateError;
 
-      // Record rejection in history
+      // Record rejection in history (reason stored on mileage_vouchers.rejection_reason)
       const { error: historyError } = await supabase
         .from('approval_history')
         .insert({
@@ -340,7 +340,6 @@ export const useApproverVouchers = () => {
           approver_id: user.id,
           approver_role: approverRole,
           action: 'reject',
-          comments: reason,
         });
 
       if (historyError) throw historyError;
