@@ -242,13 +242,15 @@ export const useApproverVouchers = () => {
     voucher: MileageVoucherRecord,
     employeeEmail: string,
     employeeName: string,
-    nextApproverEmail?: string
+    nextApproverEmail?: string,
+    accountantEmail?: string
   ) => {
     if (!user || !approverRole) return false;
 
     try {
       const newStatus = getStatusAfterApproval(approverRole);
       const nextRole = getNextApproverRole(newStatus);
+      const isFinalApproval = newStatus === 'approved';
 
       // Update voucher status
       const { error: updateError } = await supabase
@@ -270,7 +272,7 @@ export const useApproverVouchers = () => {
 
       if (historyError) throw historyError;
 
-      // Send notification email
+      // Send notification email to next approver or employee
       const notificationEmail = nextApproverEmail || employeeEmail;
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
 
@@ -285,6 +287,20 @@ export const useApproverVouchers = () => {
           nextApproverRole: nextRole,
         },
       });
+
+      // If final approval, also notify accountant
+      if (isFinalApproval && accountantEmail) {
+        await supabase.functions.invoke('send-approval-email', {
+          body: {
+            voucherId: voucher.id,
+            action: 'final_approval',
+            recipientEmail: accountantEmail,
+            employeeName,
+            month: monthDisplay,
+            totalMiles: voucher.total_miles,
+          },
+        });
+      }
 
       toast.success('Voucher approved');
       await fetchPendingVouchers();

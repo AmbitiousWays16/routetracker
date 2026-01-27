@@ -37,12 +37,14 @@ export default function Approvals() {
   const [selectedVoucher, setSelectedVoucher] = useState<MileageVoucherRecord | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState('');
   const [nextApproverEmail, setNextApproverEmail] = useState('');
+  const [accountantEmail, setAccountantEmail] = useState('');
   const [rejectReason, setRejectReason] = useState('');
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [nextEmailError, setNextEmailError] = useState('');
+  const [accountantEmailError, setAccountantEmailError] = useState('');
 
   const fetchEmployeeEmail = async (userId: string) => {
     const { data } = await supabase
@@ -58,8 +60,10 @@ export default function Approvals() {
     const email = await fetchEmployeeEmail(voucher.user_id);
     setEmployeeEmail(email);
     setNextApproverEmail('');
+    setAccountantEmail('');
     setEmailError('');
     setNextEmailError('');
+    setAccountantEmailError('');
     setShowApproveDialog(true);
   };
 
@@ -85,11 +89,21 @@ export default function Approvals() {
     // Check if we need next approver email
     const newStatus = getStatusAfterApproval(approverRole);
     const nextRole = getNextApproverRole(newStatus);
+    const isFinalApproval = newStatus === 'approved';
     
     if (nextRole && nextApproverEmail) {
       const nextEmailResult = emailSchema.safeParse(nextApproverEmail.trim());
       if (!nextEmailResult.success) {
         setNextEmailError(nextEmailResult.error.errors[0].message);
+        return;
+      }
+    }
+
+    // Validate accountant email if final approval
+    if (isFinalApproval && accountantEmail) {
+      const accountantEmailResult = emailSchema.safeParse(accountantEmail.trim());
+      if (!accountantEmailResult.success) {
+        setAccountantEmailError(accountantEmailResult.error.errors[0].message);
         return;
       }
     }
@@ -100,7 +114,8 @@ export default function Approvals() {
         selectedVoucher,
         employeeEmail.trim(),
         employeeEmail.trim(),
-        nextApproverEmail.trim() || undefined
+        nextApproverEmail.trim() || undefined,
+        accountantEmail.trim() || undefined
       );
       setShowApproveDialog(false);
     } finally {
@@ -133,6 +148,7 @@ export default function Approvals() {
   };
 
   const needsNextApprover = approverRole && getNextApproverRole(getStatusAfterApproval(approverRole));
+  const isFinalApprover = approverRole === 'coo';
 
   return (
     <div className="min-h-screen bg-background">
@@ -270,6 +286,29 @@ export default function Approvals() {
                 {nextEmailError && <p className="text-sm text-destructive">{nextEmailError}</p>}
                 <p className="text-xs text-muted-foreground">
                   The {getRoleDisplayName(needsNextApprover)} will be notified to review next.
+                </p>
+              </div>
+            )}
+
+            {isFinalApprover && (
+              <div className="space-y-2">
+                <Label htmlFor="accountant-email">
+                  Accountant Email (Optional)
+                </Label>
+                <Input
+                  id="accountant-email"
+                  type="email"
+                  value={accountantEmail}
+                  onChange={(e) => {
+                    setAccountantEmail(e.target.value);
+                    setAccountantEmailError('');
+                  }}
+                  placeholder="accountant@westcare.com"
+                  className={accountantEmailError ? 'border-destructive' : ''}
+                />
+                {accountantEmailError && <p className="text-sm text-destructive">{accountantEmailError}</p>}
+                <p className="text-xs text-muted-foreground">
+                  The accountant will receive the final approved voucher for processing.
                 </p>
               </div>
             )}
