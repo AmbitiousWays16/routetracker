@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Trip } from '@/types/mileage';
+import { Trip, RouteMapData } from '@/types/mileage';
 import { FileDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
+import { fetchMapImageAsBase64 } from '@/lib/mapUtils';
 
 interface ExportButtonProps {
   trips: Trip[];
@@ -49,6 +50,15 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
+      // Fetch map images for all trips in parallel (secure server-side fetch)
+      const mapImagesPromises = sortedTrips.map(async (trip) => {
+        if (trip.routeMapData) {
+          return await fetchMapImageAsBase64(trip.routeMapData);
+        }
+        return null;
+      });
+      const mapImages = await Promise.all(mapImagesPromises);
+
       // Generate route map sections for each trip (with XSS protection)
       const tripRouteSections = sortedTrips.map((trip, index) => {
         const safeFromAddress = escapeHtml(trip.fromAddress);
@@ -59,6 +69,9 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         const encodedFrom = encodeURIComponent(trip.fromAddress);
         const encodedTo = encodeURIComponent(trip.toAddress);
         const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
+        
+        // Use securely fetched base64 image (no exposed API keys)
+        const mapImageBase64 = mapImages[index];
         
         return `
           <div class="trip-detail" style="page-break-inside: avoid; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
@@ -87,8 +100,8 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               </div>
             </div>
             <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
-              ${trip.staticMapUrl ? `
-                <img src="${escapeHtml(trip.staticMapUrl)}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
+              ${mapImageBase64 ? `
+                <img src="${mapImageBase64}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
               ` : `
                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
               `}

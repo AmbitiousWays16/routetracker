@@ -6,10 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from 'lucide-react';
-import { Trip } from '@/types/mileage';
+import { Trip, RouteMapData } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
+import { ProxyMapImage } from './ProxyMapImage';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
@@ -41,7 +42,7 @@ const tripFormSchema = z.object({
 
 interface TripFormProps {
   onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
-  onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; staticMapUrl?: string } | null>;
+  onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; routeMapData?: RouteMapData } | null>;
   programs: Program[];
   programsLoading: boolean;
   isAdmin: boolean;
@@ -67,7 +68,7 @@ export const TripForm = ({
   const [program, setProgram] = useState('');
   const [miles, setMiles] = useState<number>(0);
   const [routeUrl, setRouteUrl] = useState('');
-  const [staticMapUrl, setStaticMapUrl] = useState('');
+  const [routeMapData, setRouteMapData] = useState<RouteMapData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
 
@@ -89,7 +90,7 @@ export const TripForm = ({
       if (result) {
         setMiles(result.miles);
         setRouteUrl(result.routeUrl);
-        setStaticMapUrl(result.staticMapUrl || '');
+        setRouteMapData(result.routeMapData || null);
       }
     } finally {
       setIsCalculating(false);
@@ -127,7 +128,7 @@ export const TripForm = ({
       program: validation.data.program,
       miles,
       routeUrl,
-      staticMapUrl,
+      routeMapData: routeMapData || undefined,
     });
 
     // If round trip, submit the return trip with swapped addresses
@@ -140,7 +141,7 @@ export const TripForm = ({
         program: validation.data.program,
         miles,
         routeUrl,
-        staticMapUrl,
+        routeMapData: routeMapData || undefined,
       });
     }
 
@@ -151,7 +152,7 @@ export const TripForm = ({
     setProgram('');
     setMiles(0);
     setRouteUrl('');
-    setStaticMapUrl('');
+    setRouteMapData(null);
     setIsRoundTrip(false);
   };
 
@@ -266,15 +267,13 @@ export const TripForm = ({
             )}
           </div>
 
-          {staticMapUrl && (
+          {routeMapData && (
             <div className="overflow-hidden rounded-lg border">
-              <a href={routeUrl} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={staticMapUrl}
-                  alt="Route Map"
-                  className="h-auto w-full"
-                />
-              </a>
+              <ProxyMapImage
+                routeMapData={routeMapData}
+                routeUrl={routeUrl}
+                className="rounded-t-lg"
+              />
               <div className="bg-muted p-2 text-center text-sm text-muted-foreground">
                 Click to view directions on Google Maps
               </div>
