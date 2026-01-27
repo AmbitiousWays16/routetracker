@@ -31,8 +31,14 @@ interface RouteRequest {
 interface RouteResponse {
   miles: number;
   routeUrl: string;
-  staticMapUrl: string;
-  encodedPolyline?: string;
+  // Route metadata for secure proxy-based map retrieval (API key stays server-side)
+  routeMapData: {
+    encodedPolyline: string;
+    startLat: number;
+    startLng: number;
+    endLat: number;
+    endLng: number;
+  };
 }
 
 // Maximum allowed length for addresses
@@ -237,20 +243,20 @@ serve(async (req) => {
     const encodedTo = encodeURIComponent(trimmedTo);
     const routeUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
     
-    // Generate Static Maps URL directly from Google Maps API
-    // This allows images to be displayed in the UI without auth headers
-    const staticMapUrl = `https://maps.googleapis.com/maps/api/staticmap?` +
-      `size=600x300&maptype=roadmap` +
-      `&path=enc:${encodeURIComponent(encodedPolyline)}` +
-      `&markers=color:green|label:A|${leg.start_location.lat},${leg.start_location.lng}` +
-      `&markers=color:red|label:B|${leg.end_location.lat},${leg.end_location.lng}` +
-      `&key=${apiKey}`;
+    // Return route metadata for secure proxy-based map retrieval
+    // The API key is never exposed to the client - maps are fetched via static-map-proxy
+    const routeMapData = {
+      encodedPolyline,
+      startLat: leg.start_location.lat,
+      startLng: leg.start_location.lng,
+      endLat: leg.end_location.lat,
+      endLng: leg.end_location.lng,
+    };
 
     const response: RouteResponse = {
       miles,
       routeUrl,
-      staticMapUrl,
-      encodedPolyline,
+      routeMapData,
     };
 
     console.log(`Route calculated: ${miles} miles`);
