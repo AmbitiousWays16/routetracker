@@ -11,10 +11,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { FileDown, Loader2, Archive } from 'lucide-react';
-import { Trip } from '@/types/mileage';
+import { Trip, RouteMapData } from '@/types/mileage';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { fetchMapImageAsBase64 } from '@/lib/mapUtils';
 
 interface ArchivePromptDialogProps {
   onExportComplete: () => void;
@@ -63,18 +64,33 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
         if (error) throw error;
 
         if (data && data.length > 0) {
-          const formattedTrips: Trip[] = data.map((trip) => ({
-            id: trip.id,
-            date: trip.date,
-            fromAddress: trip.from_address,
-            toAddress: trip.to_address,
-            program: trip.program,
-            businessPurpose: trip.purpose,
-            miles: Number(trip.miles),
-            routeUrl: trip.route_url || undefined,
-            staticMapUrl: trip.static_map_url || undefined,
-            createdAt: new Date(trip.created_at),
-          }));
+          const formattedTrips: Trip[] = data.map((trip) => {
+            // Parse routeMapData from static_map_url if it's stored as JSON
+            let routeMapData: RouteMapData | undefined;
+            if (trip.static_map_url) {
+              try {
+                const parsed = JSON.parse(trip.static_map_url);
+                if (parsed.encodedPolyline) {
+                  routeMapData = parsed;
+                }
+              } catch {
+                // Not JSON - this is a legacy URL, ignore it
+              }
+            }
+
+            return {
+              id: trip.id,
+              date: trip.date,
+              fromAddress: trip.from_address,
+              toAddress: trip.to_address,
+              program: trip.program,
+              businessPurpose: trip.purpose,
+              miles: Number(trip.miles),
+              routeUrl: trip.route_url || undefined,
+              routeMapData,
+              createdAt: new Date(trip.created_at),
+            };
+          });
 
           setPreviousMonthTrips(formattedTrips);
           setPreviousMonthLabel(format(previousMonth, 'MMMM yyyy'));
@@ -118,6 +134,15 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
 
+      // Fetch map images for all trips in parallel (secure server-side fetch)
+      const mapImagesPromises = sortedTrips.map(async (trip) => {
+        if (trip.routeMapData) {
+          return await fetchMapImageAsBase64(trip.routeMapData);
+        }
+        return null;
+      });
+      const mapImages = await Promise.all(mapImagesPromises);
+
       const tripRouteSections = sortedTrips.map((trip, index) => {
         const safeFromAddress = escapeHtml(trip.fromAddress);
         const safeToAddress = escapeHtml(trip.toAddress);
@@ -127,6 +152,9 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
         const encodedFrom = encodeURIComponent(trip.fromAddress);
         const encodedTo = encodeURIComponent(trip.toAddress);
         const directionsUrl = `https://www.google.com/maps/dir/${encodedFrom}/${encodedTo}`;
+        
+        // Use securely fetched base64 image (no exposed API keys)
+        const mapImageBase64 = mapImages[index];
         
         return `
           <div class="trip-detail" style="page-break-inside: avoid; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
@@ -155,8 +183,8 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
               </div>
             </div>
             <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
-              ${trip.staticMapUrl ? `
-                <img src="${escapeHtml(trip.staticMapUrl)}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
+              ${mapImageBase64 ? `
+                <img src="${mapImageBase64}" alt="Route Map" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />
               ` : `
                 <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748b;">Route Map</p>
               `}
