@@ -19,8 +19,14 @@ const Index = () => {
     
     try {
       // Check if user session exists before making the request
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error('Failed to read session:', sessionError);
+      }
+
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
         console.error('No active session - user not authenticated');
         toast.error('Please log in to calculate routes');
         return null;
@@ -29,6 +35,9 @@ const Index = () => {
 
       const { data, error } = await supabase.functions.invoke('google-maps-route', {
         body: { fromAddress: from, toAddress: to },
+        // Explicitly pass the JWT to avoid any edge-cases where the auth header isn't attached
+        // (e.g., custom-domain session refresh issues or timing during app init)
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       console.log('Route response received:', { hasData: !!data, hasError: !!error });
