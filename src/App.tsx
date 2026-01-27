@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Approvals from "./pages/Approvals";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -52,6 +53,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Approvals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute>
+                  <UserManagement />
                 </ProtectedRoute>
               }
             />
