@@ -20,7 +20,6 @@ export type Database = {
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
           approver_role: Database["public"]["Enums"]["app_role"]
-          comments: string | null
           id: string
           voucher_id: string
         }
@@ -29,7 +28,6 @@ export type Database = {
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
           approver_role: Database["public"]["Enums"]["app_role"]
-          comments?: string | null
           id?: string
           voucher_id: string
         }
@@ -38,7 +36,6 @@ export type Database = {
           action?: Database["public"]["Enums"]["approval_action"]
           approver_id?: string
           approver_role?: Database["public"]["Enums"]["app_role"]
-          comments?: string | null
           id?: string
           voucher_id?: string
         }
