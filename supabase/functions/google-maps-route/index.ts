@@ -5,6 +5,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const allowedOrigins = [
   'https://dumhzvkifwhvdgswplew.supabase.co',
   'https://id-preview--2face1c8-df08-44c3-9a59-cc212f800657.lovable.app',
+  'https://routetracker.lovable.app',
+  'https://triptrackerapp.tech',
+  'https://www.triptrackerapp.tech',
   'http://localhost:5173',
   'http://localhost:8080',
 ];
@@ -16,7 +19,10 @@ const getCorsHeaders = (origin: string | null) => {
   
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    // Must include all headers the browser may send (Supabase web client adds x-supabase-client-*)
+    'Access-Control-Allow-Headers':
+      'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
