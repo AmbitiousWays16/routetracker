@@ -41,7 +41,7 @@ const tripFormSchema = z.object({
 });
 
 interface TripFormProps {
-  onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => void;
+  onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => Promise<unknown> | void;
   onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; routeMapData?: RouteMapData } | null>;
   programs: Program[];
   programsLoading: boolean;
@@ -97,7 +97,7 @@ export const TripForm = ({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validate all form inputs with Zod
@@ -119,8 +119,8 @@ export const TripForm = ({
       return;
     }
 
-    // Submit the outbound trip
-    onSubmit({
+    // Submit the outbound trip (await to ensure it completes)
+    await onSubmit({
       date: validation.data.date,
       fromAddress: validation.data.fromAddress,
       toAddress: validation.data.toAddress,
@@ -133,7 +133,7 @@ export const TripForm = ({
 
     // If round trip, submit the return trip with swapped addresses
     if (isRoundTrip) {
-      onSubmit({
+      await onSubmit({
         date: validation.data.date,
         fromAddress: validation.data.toAddress,
         toAddress: validation.data.fromAddress,
