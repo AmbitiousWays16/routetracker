@@ -1,29 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Allowed origins for CORS
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:8080",
-  "https://lovable.dev",
-];
-
-const getCorsHeaders = (origin: string | null) => {
-  // Check if origin matches allowed patterns (including *.lovable.app and *.lovableproject.com)
-  const isAllowed = origin && (
-    allowedOrigins.includes(origin) ||
-    origin.endsWith('.lovable.app') ||
-    origin.endsWith('.lovable.dev') ||
-    origin.endsWith('.lovableproject.com')
-  );
-  
-  return {
-    "Access-Control-Allow-Origin": isAllowed ? origin : allowedOrigins[0],
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
-  };
+// CORS headers for web usage.
+// Note: This endpoint is still protected by JWT validation; CORS is about browser access.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
 };
 
 // Rate limiting configuration
@@ -60,12 +46,9 @@ const checkRateLimit = (userId: string): { allowed: boolean; remaining: number; 
 };
 
 serve(async (req) => {
-  const origin = req.headers.get("origin");
-  const corsHeaders = getCorsHeaders(origin);
-
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -136,12 +119,38 @@ serve(async (req) => {
     // =============================================
     // PARAMETER VALIDATION
     // =============================================
-    const url = new URL(req.url);
-    const polyline = url.searchParams.get("polyline");
-    const startLat = url.searchParams.get("startLat");
-    const startLng = url.searchParams.get("startLng");
-    const endLat = url.searchParams.get("endLat");
-    const endLng = url.searchParams.get("endLng");
+    let polyline: string | null = null;
+    let startLat: string | null = null;
+    let startLng: string | null = null;
+    let endLat: string | null = null;
+    let endLng: string | null = null;
+
+    // Support both GET (legacy) and POST (preferred to avoid URL-length limits)
+    if (req.method === 'POST') {
+      let body: Record<string, unknown>;
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'Invalid JSON body' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      const bodyPolyline = body.polyline ?? body.encodedPolyline;
+      polyline = typeof bodyPolyline === 'string' ? bodyPolyline : null;
+      startLat = typeof body.startLat === 'number' ? String(body.startLat) : (typeof body.startLat === 'string' ? body.startLat : null);
+      startLng = typeof body.startLng === 'number' ? String(body.startLng) : (typeof body.startLng === 'string' ? body.startLng : null);
+      endLat = typeof body.endLat === 'number' ? String(body.endLat) : (typeof body.endLat === 'string' ? body.endLat : null);
+      endLng = typeof body.endLng === 'number' ? String(body.endLng) : (typeof body.endLng === 'string' ? body.endLng : null);
+    } else {
+      const url = new URL(req.url);
+      polyline = url.searchParams.get('polyline');
+      startLat = url.searchParams.get('startLat');
+      startLng = url.searchParams.get('startLng');
+      endLat = url.searchParams.get('endLat');
+      endLng = url.searchParams.get('endLng');
+    }
 
     // Validate required parameters
     if (!polyline || !startLat || !startLng || !endLat || !endLng) {

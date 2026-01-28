@@ -13,19 +13,22 @@ export const fetchMapImageAsBase64 = async (routeMapData: RouteMapData): Promise
       return null;
     }
 
-    const proxyUrl = new URL(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/static-map-proxy`
-    );
-    proxyUrl.searchParams.set('polyline', routeMapData.encodedPolyline);
-    proxyUrl.searchParams.set('startLat', String(routeMapData.startLat));
-    proxyUrl.searchParams.set('startLng', String(routeMapData.startLng));
-    proxyUrl.searchParams.set('endLat', String(routeMapData.endLat));
-    proxyUrl.searchParams.set('endLng', String(routeMapData.endLng));
+    const proxyUrl = new URL(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/static-map-proxy`);
 
+    // Use POST to avoid URL-length limits caused by long polylines.
     const response = await fetch(proxyUrl.toString(), {
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${sessionData.session.access_token}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        polyline: routeMapData.encodedPolyline,
+        startLat: routeMapData.startLat,
+        startLng: routeMapData.startLng,
+        endLat: routeMapData.endLat,
+        endLng: routeMapData.endLng,
+      }),
     });
 
     if (!response.ok) {
