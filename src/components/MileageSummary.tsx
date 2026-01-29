@@ -8,7 +8,7 @@ interface MileageSummaryProps {
   totalMiles: number;
 }
 
-const MILEAGE_RATE = 0.75; // Reimbursement rate per mile
+const MILEAGE_RATE = 0.72; // Reimbursement rate per mile
 
 export const MileageSummary = ({ trips, totalMiles }: MileageSummaryProps) => {
   const reimbursement = totalMiles * MILEAGE_RATE;

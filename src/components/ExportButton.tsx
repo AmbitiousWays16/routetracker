@@ -11,7 +11,7 @@ interface ExportButtonProps {
   totalMiles: number;
 }
 
-const MILEAGE_RATE = 0.75;
+const MILEAGE_RATE = 0.72;
 
 // HTML escape function to prevent XSS in PDF generation
 const escapeHtml = (text: string): string => {
