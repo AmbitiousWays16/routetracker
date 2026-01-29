@@ -21,7 +21,7 @@ interface ArchivePromptDialogProps {
   onExportComplete: () => void;
 }
 
-const MILEAGE_RATE = 0.75;
+const MILEAGE_RATE = 0.72;
 const ARCHIVE_PROMPT_KEY = 'lastArchivePromptMonth';
 
 const escapeHtml = (text: string): string => {
