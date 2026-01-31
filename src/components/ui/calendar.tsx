@@ -5,13 +5,37 @@ import { DayPicker } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+export interface CalendarProps extends React.ComponentProps<typeof DayPicker> {
+  disabled?: {
+    before?: Date;
+    after?: Date;
+    daysOfWeek?: number[];
+  };
+  mode?: "single" | "multiple" | "range";
+}
 
-function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
+function Calendar({
+  className,
+  classNames,
+  showOutsideDays = true,
+  disabled,
+  mode = "single",
+  ...props
+}: CalendarProps) {
+  // Default: no future dates for mileage tracking
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
   return (
     <DayPicker
+      mode={mode}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      disabled={
+        disabled || {
+          after: today,
+        }
+      }
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -22,8 +46,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
+        nav_button_previous: "mr-1", // FIXED: relative positioning
+        nav_button_next: "ml-1", // FIXED: relative positioning
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
