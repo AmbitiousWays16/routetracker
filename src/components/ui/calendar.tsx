@@ -1,41 +1,28 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, type DayPickerProps } from "react-day-picker";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
-export interface CalendarProps extends React.ComponentProps<typeof DayPicker> {
-  disabled?: {
-    before?: Date;
-    after?: Date;
-    daysOfWeek?: number[];
-  };
-  mode?: "single" | "multiple" | "range";
+// Base props come from DayPickerProps
+export interface CalendarProps extends DayPickerProps {
+  // Optional override for disabled matcher; if not provided, we block future dates by default
+  disabledMatchers?: DayPickerProps["disabled"];
 }
 
-function Calendar({
-  className,
-  classNames,
-  showOutsideDays = true,
-  disabled,
-  mode = "single",
-  ...props
-}: CalendarProps) {
+function Calendar({ className, classNames, showOutsideDays = true, disabledMatchers, ...props }: CalendarProps) {
   // Default: no future dates for mileage tracking
   const today = new Date();
   today.setHours(23, 59, 59, 999);
 
+  const effectiveDisabled = disabledMatchers ?? { after: today };
+
   return (
     <DayPicker
-      mode={mode}
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
-      disabled={
-        disabled || {
-          after: today,
-        }
-      }
+      disabled={effectiveDisabled}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -46,8 +33,9 @@ function Calendar({
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
         ),
-        nav_button_previous: "mr-1", // FIXED: relative positioning
-        nav_button_next: "ml-1", // FIXED: relative positioning
+        // Use relative spacing instead of absolute positioning for nav buttons
+        nav_button_previous: "mr-1",
+        nav_button_next: "ml-1",
         table: "w-full border-collapse space-y-1",
         head_row: "flex",
         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
@@ -66,13 +54,14 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: (_props) => <ChevronLeft className="h-4 w-4" />,
+        IconRight: (_props) => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />
   );
 }
+
 Calendar.displayName = "Calendar";
 
 export { Calendar };
