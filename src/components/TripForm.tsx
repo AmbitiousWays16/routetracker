@@ -1,48 +1,47 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
-import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from 'lucide-react';
-import { Trip, RouteMapData } from '@/types/mileage';
-import { Program } from '@/hooks/usePrograms';
-import { ProgramManager } from './ProgramManager';
-import { AddressAutocomplete } from './AddressAutocomplete';
-import { ProxyMapImage } from './ProxyMapImage';
-import { z } from 'zod';
-import { toast } from 'sonner';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from "lucide-react";
+import { Trip, RouteMapData } from "@/types/mileage";
+import { Program } from "@/hooks/usePrograms";
+import { ProgramManager } from "./ProgramManager";
+import { AddressAutocomplete } from "./AddressAutocomplete";
+import { ProxyMapImage } from "./ProxyMapImage";
+import { z } from "zod";
+import { toast } from "sonner";
 
 // Input validation schema for trip form
 const tripFormSchema = z.object({
-  date: z.string()
-    .refine((val) => {
-      const date = new Date(val);
-      const today = new Date();
-      today.setHours(23, 59, 59, 999);
-      return date <= today;
-    }, 'Date cannot be in the future'),
-  fromAddress: z.string()
+  date: z.string().refine((val) => {
+    const date = new Date(val);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    return date <= today;
+  }, "Date cannot be in the future"),
+  fromAddress: z
+    .string()
     .trim()
-    .min(1, 'From address is required')
-    .max(500, 'Address is too long (max 500 characters)'),
-  toAddress: z.string()
+    .min(1, "From address is required")
+    .max(500, "Address is too long (max 500 characters)"),
+  toAddress: z.string().trim().min(1, "To address is required").max(500, "Address is too long (max 500 characters)"),
+  businessPurpose: z
+    .string()
     .trim()
-    .min(1, 'To address is required')
-    .max(500, 'Address is too long (max 500 characters)'),
-  businessPurpose: z.string()
-    .trim()
-    .min(1, 'Business purpose is required')
-    .max(500, 'Business purpose is too long (max 500 characters)'),
-  program: z.string()
-    .min(1, 'Program is required')
-    .max(200, 'Program name is too long'),
+    .min(1, "Business purpose is required")
+    .max(500, "Business purpose is too long (max 500 characters)"),
+  program: z.string().min(1, "Program is required").max(200, "Program name is too long"),
 });
 
 interface TripFormProps {
-  onSubmit: (trip: Omit<Trip, 'id' | 'createdAt'>) => Promise<unknown> | void;
-  onCalculateRoute: (from: string, to: string) => Promise<{ miles: number; routeUrl: string; routeMapData?: RouteMapData } | null>;
+  onSubmit: (trip: Omit<Trip, "id" | "createdAt">) => Promise<unknown> | void;
+  onCalculateRoute: (
+    from: string,
+    to: string,
+  ) => Promise<{ miles: number; routeUrl: string; routeMapData?: RouteMapData } | null>;
   programs: Program[];
   programsLoading: boolean;
   isAdmin: boolean;
@@ -61,28 +60,36 @@ export const TripForm = ({
   onUpdateProgram,
   onDeleteProgram,
 }: TripFormProps) => {
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [fromAddress, setFromAddress] = useState('');
-  const [toAddress, setToAddress] = useState('');
-  const [businessPurpose, setBusinessPurpose] = useState('');
-  const [program, setProgram] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [fromAddress, setFromAddress] = useState("");
+  const [toAddress, setToAddress] = useState("");
+  const [businessPurpose, setBusinessPurpose] = useState("");
+  const [program, setProgram] = useState("");
   const [miles, setMiles] = useState<number>(0);
-  const [routeUrl, setRouteUrl] = useState('');
+  const [routeUrl, setRouteUrl] = useState("");
   const [routeMapData, setRouteMapData] = useState<RouteMapData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Optional: structure for per-field error messages (inline UX)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof z.infer<typeof tripFormSchema>, string>>>({});
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
-    // Auto-fill to address from program
     const selectedProgram = programs.find((p) => p.name === programName);
-    if (selectedProgram?.address) {
+
+    // Only auto-fill destination if it is currently empty
+    if (!toAddress && selectedProgram?.address) {
       setToAddress(selectedProgram.address);
     }
   };
 
   const handleCalculateRoute = async () => {
-    if (!fromAddress || !toAddress) return;
+    if (!fromAddress || !toAddress) {
+      toast.error("Please enter both From and To addresses before calculating the route.");
+      return;
+    }
 
     setIsCalculating(true);
     try {
@@ -91,6 +98,11 @@ export const TripForm = ({
         setMiles(result.miles);
         setRouteUrl(result.routeUrl);
         setRouteMapData(result.routeMapData || null);
+      } else {
+        // Clear any stale data if calculation failed
+        setMiles(0);
+        setRouteUrl("");
+        setRouteMapData(null);
       }
     } finally {
       setIsCalculating(false);
@@ -99,8 +111,11 @@ export const TripForm = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate all form inputs with Zod
+    if (isSubmitting) return;
+
+    // Reset previous field errors
+    setFieldErrors({});
+
     const validation = tripFormSchema.safeParse({
       date,
       fromAddress,
@@ -108,55 +123,80 @@ export const TripForm = ({
       businessPurpose,
       program,
     });
-    
+
     if (!validation.success) {
-      toast.error(validation.error.errors[0].message);
+      // Map the first error to fieldErrors for inline use, and show toast
+      const firstError = validation.error.errors[0];
+      if (firstError?.path?.[0]) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [firstError.path[0] as keyof z.infer<typeof tripFormSchema>]: firstError.message,
+        }));
+      }
+      toast.error(firstError.message);
       return;
     }
 
     if (miles <= 0) {
-      toast.error('Please calculate the route first');
+      toast.error("Please calculate the route first");
       return;
     }
 
-    // Submit the outbound trip (await to ensure it completes)
-    await onSubmit({
-      date: validation.data.date,
-      fromAddress: validation.data.fromAddress,
-      toAddress: validation.data.toAddress,
-      businessPurpose: validation.data.businessPurpose,
-      program: validation.data.program,
-      miles,
-      routeUrl,
-      routeMapData: routeMapData || undefined,
-    });
+    setIsSubmitting(true);
+    try {
+      const {
+        date: validDate,
+        fromAddress: validFrom,
+        toAddress: validTo,
+        businessPurpose: validPurpose,
+        program: validProgram,
+      } = validation.data;
 
-    // If round trip, submit the return trip with swapped addresses
-    if (isRoundTrip) {
+      // Outbound trip
       await onSubmit({
-        date: validation.data.date,
-        fromAddress: validation.data.toAddress,
-        toAddress: validation.data.fromAddress,
-        businessPurpose: `${validation.data.businessPurpose} (Return)`,
-        program: validation.data.program,
+        date: validDate,
+        fromAddress: validFrom,
+        toAddress: validTo,
+        businessPurpose: validPurpose,
+        program: validProgram,
         miles,
         routeUrl,
         routeMapData: routeMapData || undefined,
       });
-    }
 
-    // Reset form
-    setFromAddress('');
-    setToAddress('');
-    setBusinessPurpose('');
-    setProgram('');
-    setMiles(0);
-    setRouteUrl('');
-    setRouteMapData(null);
-    setIsRoundTrip(false);
+      // Optional round trip
+      if (isRoundTrip) {
+        await onSubmit({
+          date: validDate,
+          fromAddress: validTo,
+          toAddress: validFrom,
+          businessPurpose: `${validPurpose} (Return)`,
+          program: validProgram,
+          miles,
+          routeUrl,
+          routeMapData: routeMapData || undefined,
+        });
+        toast.success("Round trip added (2 entries).");
+      } else {
+        toast.success("Trip added successfully.");
+      }
+
+      // Reset form
+      setFromAddress("");
+      setToAddress("");
+      setBusinessPurpose("");
+      setProgram("");
+      setMiles(0);
+      setRouteUrl("");
+      setRouteMapData(null);
+      setIsRoundTrip(false);
+      setFieldErrors({});
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const isValid = date && fromAddress && toAddress && businessPurpose && program && miles > 0;
+  const isValid = date && fromAddress && toAddress && businessPurpose && program && miles > 0 && !isSubmitting;
 
   return (
     <Card className="shadow-card animate-fade-in">
@@ -191,16 +231,18 @@ export const TripForm = ({
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="h-10"
+                disabled={isSubmitting}
               />
+              {fieldErrors.date && <p className="text-xs text-destructive mt-1">{fieldErrors.date}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="program" className="flex items-center gap-1.5 text-sm font-medium">
                 <FileText className="h-3.5 w-3.5 text-muted-foreground" />
                 Program
               </Label>
-              <Select value={program} onValueChange={handleProgramChange}>
+              <Select value={program} onValueChange={handleProgramChange} disabled={isSubmitting || programsLoading}>
                 <SelectTrigger className="h-10">
-                  <SelectValue placeholder={programsLoading ? 'Loading...' : 'Select program'} />
+                  <SelectValue placeholder={programsLoading ? "Loading..." : "Select program"} />
                 </SelectTrigger>
                 <SelectContent>
                   {programs.map((p) => (
@@ -210,6 +252,7 @@ export const TripForm = ({
                   ))}
                 </SelectContent>
               </Select>
+              {fieldErrors.program && <p className="text-xs text-destructive mt-1">{fieldErrors.program}</p>}
             </div>
           </div>
 
@@ -225,7 +268,9 @@ export const TripForm = ({
                 value={fromAddress}
                 onChange={setFromAddress}
                 programs={programs}
+                disabled={isSubmitting}
               />
+              {fieldErrors.fromAddress && <p className="text-xs text-destructive mt-1">{fieldErrors.fromAddress}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="to" className="flex items-center gap-1.5 text-sm font-medium">
@@ -238,7 +283,9 @@ export const TripForm = ({
                 value={toAddress}
                 onChange={(e) => setToAddress(e.target.value)}
                 className="h-10"
+                disabled={isSubmitting}
               />
+              {fieldErrors.toAddress && <p className="text-xs text-destructive mt-1">{fieldErrors.toAddress}</p>}
             </div>
           </div>
 
@@ -247,7 +294,7 @@ export const TripForm = ({
               type="button"
               variant="outline"
               onClick={handleCalculateRoute}
-              disabled={!fromAddress || !toAddress || isCalculating}
+              disabled={!fromAddress || !toAddress || isCalculating || isSubmitting}
               className="flex-shrink-0"
             >
               {isCalculating ? (
@@ -256,7 +303,7 @@ export const TripForm = ({
                   Calculating...
                 </>
               ) : (
-                'Calculate Route'
+                "Calculate Route"
               )}
             </Button>
             {miles > 0 && (
@@ -269,11 +316,7 @@ export const TripForm = ({
 
           {routeMapData && (
             <div className="overflow-hidden rounded-lg border">
-              <ProxyMapImage
-                routeMapData={routeMapData}
-                routeUrl={routeUrl}
-                className="rounded-t-lg"
-              />
+              <ProxyMapImage routeMapData={routeMapData} routeUrl={routeUrl} className="rounded-t-lg" />
               <div className="bg-muted p-2 text-center text-sm text-muted-foreground">
                 Click to view directions on Google Maps
               </div>
@@ -290,7 +333,11 @@ export const TripForm = ({
               value={businessPurpose}
               onChange={(e) => setBusinessPurpose(e.target.value)}
               className="h-10"
+              disabled={isSubmitting}
             />
+            {fieldErrors.businessPurpose && (
+              <p className="text-xs text-destructive mt-1">{fieldErrors.businessPurpose}</p>
+            )}
           </div>
 
           <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
@@ -300,20 +347,14 @@ export const TripForm = ({
                 <Label htmlFor="round-trip" className="text-sm font-medium cursor-pointer">
                   Round Trip
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  Automatically add return journey
-                </p>
+                <p className="text-xs text-muted-foreground">Automatically add return journey</p>
               </div>
             </div>
-            <Switch
-              id="round-trip"
-              checked={isRoundTrip}
-              onCheckedChange={setIsRoundTrip}
-            />
+            <Switch id="round-trip" checked={isRoundTrip} onCheckedChange={setIsRoundTrip} disabled={isSubmitting} />
           </div>
 
           <Button type="submit" disabled={!isValid} className="w-full gradient-primary">
-            Add Trip
+            {isSubmitting ? "Saving..." : "Add Trip"}
           </Button>
         </form>
       </CardContent>
