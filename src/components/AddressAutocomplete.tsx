@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
-import { Program } from '@/hooks/usePrograms';
-import { cn } from '@/lib/utils';
+import { useState, useRef, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Program } from "@/hooks/usePrograms";
+import { cn } from "@/lib/utils";
 
 interface AddressAutocompleteProps {
   value: string;
@@ -10,15 +10,17 @@ interface AddressAutocompleteProps {
   placeholder?: string;
   id?: string;
   className?: string;
+  disabled?: boolean; // NEW: matches TripForm usage
 }
 
 export const AddressAutocomplete = ({
   value,
   onChange,
   programs,
-  placeholder = 'Enter address',
+  placeholder = "Enter address",
   id,
   className,
+  disabled = false,
 }: AddressAutocompleteProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -29,12 +31,11 @@ export const AddressAutocomplete = ({
   const filteredPrograms = value.trim()
     ? programs.filter(
         (p) =>
-          p.name.toLowerCase().includes(value.toLowerCase()) ||
-          p.address.toLowerCase().includes(value.toLowerCase())
+          p.name.toLowerCase().includes(value.toLowerCase()) || p.address.toLowerCase().includes(value.toLowerCase()),
       )
     : [];
 
-  const showDropdown = isOpen && filteredPrograms.length > 0;
+  const showDropdown = isOpen && filteredPrograms.length > 0 && !disabled;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -44,8 +45,8 @@ export const AddressAutocomplete = ({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Reset highlighted index when filtered results change
@@ -55,7 +56,9 @@ export const AddressAutocomplete = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
-    setIsOpen(true);
+    if (!disabled) {
+      setIsOpen(true);
+    }
   };
 
   const handleSelect = (program: Program) => {
@@ -68,27 +71,27 @@ export const AddressAutocomplete = ({
     if (!showDropdown) return;
 
     switch (e.key) {
-      case 'ArrowDown':
+      case "ArrowDown":
         e.preventDefault();
-        setHighlightedIndex((prev) =>
-          prev < filteredPrograms.length - 1 ? prev + 1 : prev
-        );
+        setHighlightedIndex((prev) => (prev < filteredPrograms.length - 1 ? prev + 1 : prev));
         break;
-      case 'ArrowUp':
+      case "ArrowUp":
         e.preventDefault();
         setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
         break;
-      case 'Enter':
+      case "Enter":
         e.preventDefault();
         if (highlightedIndex >= 0 && highlightedIndex < filteredPrograms.length) {
           handleSelect(filteredPrograms[highlightedIndex]);
         }
         break;
-      case 'Escape':
+      case "Escape":
         setIsOpen(false);
         break;
     }
   };
+
+  const listboxId = id ? `${id}-listbox` : undefined;
 
   return (
     <div ref={containerRef} className="relative">
@@ -98,24 +101,31 @@ export const AddressAutocomplete = ({
         placeholder={placeholder}
         value={value}
         onChange={handleInputChange}
-        onFocus={() => setIsOpen(true)}
+        onFocus={() => !disabled && setIsOpen(true)}
         onKeyDown={handleKeyDown}
-        className={cn('h-10', className)}
+        className={cn("h-10", className)}
         autoComplete="off"
+        disabled={disabled}
+        role="combobox"
+        aria-autocomplete="list"
+        aria-expanded={showDropdown}
+        aria-controls={showDropdown ? listboxId : undefined}
       />
       {showDropdown && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
-          <ul className="max-h-60 overflow-auto py-1">
+          <ul id={listboxId} role="listbox" className="max-h-60 overflow-auto py-1">
             {filteredPrograms.map((program, index) => (
               <li
                 key={program.id}
+                role="option"
+                aria-selected={highlightedIndex === index}
                 onClick={() => handleSelect(program)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={cn(
-                  'cursor-pointer px-3 py-2 text-sm',
+                  "cursor-pointer px-3 py-2 text-sm",
                   highlightedIndex === index
-                    ? 'bg-accent text-accent-foreground'
-                    : 'hover:bg-accent hover:text-accent-foreground'
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 <div className="font-medium">{program.name}</div>
