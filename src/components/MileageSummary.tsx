@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Trip } from '@/types/mileage';
 import { Card, CardContent } from '@/components/ui/card';
 import { Car, Calendar, DollarSign, Route } from 'lucide-react';
@@ -10,45 +11,49 @@ interface MileageSummaryProps {
 
 const MILEAGE_RATE = 0.72; // Reimbursement rate per mile
 
-export const MileageSummary = ({ trips, totalMiles }: MileageSummaryProps) => {
-  const reimbursement = totalMiles * MILEAGE_RATE;
-  const currentMonth = format(new Date(), 'MMMM yyyy');
-  const tripCount = trips.length;
+export const MileageSummary = memo(({ trips, totalMiles }: MileageSummaryProps) => {
+  const { reimbursement, currentMonth, tripCount, stats } = useMemo(() => {
+    const reimbursement = totalMiles * MILEAGE_RATE;
+    const currentMonth = format(new Date(), 'MMMM yyyy');
+    const tripCount = trips.length;
 
-  const stats = [
-    {
-      label: 'Total Miles',
-      value: totalMiles.toFixed(1),
-      suffix: 'mi',
-      icon: Car,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-    },
-    {
-      label: 'Total Trips',
-      value: tripCount.toString(),
-      suffix: '',
-      icon: Route,
-      color: 'text-accent',
-      bgColor: 'bg-accent/10',
-    },
-    {
-      label: 'Reimbursement',
-      value: `$${reimbursement.toFixed(2)}`,
-      suffix: '',
-      icon: DollarSign,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-    },
-    {
-      label: 'Period',
-      value: currentMonth,
-      suffix: '',
-      icon: Calendar,
-      color: 'text-muted-foreground',
-      bgColor: 'bg-muted',
-    },
-  ];
+    const stats = [
+      {
+        label: 'Total Miles',
+        value: totalMiles.toFixed(1),
+        suffix: 'mi',
+        icon: Car,
+        color: 'text-primary',
+        bgColor: 'bg-primary/10',
+      },
+      {
+        label: 'Total Trips',
+        value: tripCount.toString(),
+        suffix: '',
+        icon: Route,
+        color: 'text-accent',
+        bgColor: 'bg-accent/10',
+      },
+      {
+        label: 'Reimbursement',
+        value: `$${reimbursement.toFixed(2)}`,
+        suffix: '',
+        icon: DollarSign,
+        color: 'text-success',
+        bgColor: 'bg-success/10',
+      },
+      {
+        label: 'Period',
+        value: currentMonth,
+        suffix: '',
+        icon: Calendar,
+        color: 'text-muted-foreground',
+        bgColor: 'bg-muted',
+      },
+    ];
+
+    return { reimbursement, currentMonth, tripCount, stats };
+  }, [trips.length, totalMiles]);
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -78,4 +83,4 @@ export const MileageSummary = ({ trips, totalMiles }: MileageSummaryProps) => {
       ))}
     </div>
   );
-};
+});

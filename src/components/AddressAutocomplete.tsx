@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Program } from "@/hooks/usePrograms";
 import { cn } from "@/lib/utils";
@@ -10,8 +10,23 @@ interface AddressAutocompleteProps {
   placeholder?: string;
   id?: string;
   className?: string;
-  disabled?: boolean; // NEW: matches TripForm usage
+  disabled?: boolean;
 }
+
+// Debounce hook to prevent excessive filtering
+const useDebounce = <T,>(value: T, delay: number = 300): T => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+};
 
 export const AddressAutocomplete = ({
   value,
@@ -27,13 +42,21 @@ export const AddressAutocomplete = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter programs based on input - match by name or address
-  const filteredPrograms = value.trim()
-    ? programs.filter(
-        (p) =>
-          p.name.toLowerCase().includes(value.toLowerCase()) || p.address.toLowerCase().includes(value.toLowerCase()),
-      )
-    : [];
+  // Debounce the filter value to reduce expensive operations
+  const debouncedValue = useDebounce(value, 200);
+
+  // Filter programs based on debounced input - match by name or address
+  const filteredPrograms = useMemo(
+    () =>
+      debouncedValue.trim()
+        ? programs.filter(
+            (p) =>
+              p.name.toLowerCase().includes(debouncedValue.toLowerCase()) ||
+              p.address.toLowerCase().includes(debouncedValue.toLowerCase()),
+          )
+        : [],
+    [debouncedValue, programs],
+  );
 
   const showDropdown = isOpen && filteredPrograms.length > 0 && !disabled;
 

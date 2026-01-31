@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, MapPin } from 'lucide-react';
 import { RouteMapData } from '@/types/mileage';
@@ -13,27 +13,46 @@ interface ProxyMapImageProps {
 /**
  * Securely displays a route map by fetching through the authenticated proxy.
  * This prevents exposing Google Maps API keys in URLs.
+ * Uses Intersection Observer for lazy loading and memoization for performance.
  */
-export const ProxyMapImage = ({ 
+export const ProxyMapImage = memo(({ 
   routeMapData, 
   routeUrl, 
   className = '',
   alt = 'Route Map'
 }: ProxyMapImageProps) => {
   const [imageSrc, setImageSrc] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [shouldLoad, setShouldLoad] = useState(false);
+  const observerRef = useRef<HTMLDivElement>(null);
+
+  // Lazy load when image enters viewport
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerRef.current) {
+      observer.observe(observerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!shouldLoad || !routeMapData) return;
+
     let isMounted = true;
     let objectUrl: string | null = null;
 
     const fetchMapImage = async () => {
-      if (!routeMapData) {
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError(false);
@@ -66,22 +85,21 @@ export const ProxyMapImage = ({
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch map: ${response.status}`);
+          throw new Error(`Map proxy error: ${response.status}`);
         }
 
         const blob = await response.blob();
+        if (!isMounted) return;
+
+        // Create blob URL for the image
         objectUrl = URL.createObjectURL(blob);
-        
-        if (isMounted) {
-          setImageSrc(objectUrl);
-          setLoading(false);
-        }
+        setImageSrc(objectUrl);
+        setLoading(false);
       } catch (err) {
+        if (!isMounted) return;
         console.error('Error fetching map image:', err);
-        if (isMounted) {
-          setError(true);
-          setLoading(false);
-        }
+        setError(true);
+        setLoading(false);
       }
     };
 
@@ -93,50 +111,61 @@ export const ProxyMapImage = ({
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [routeMapData]);
+  }, [shouldLoad, routeMapData]);
+
+  // Placeholder while waiting to load
+  if (!shouldLoad) {
+    return (
+      <div
+        ref={observerRef}
+        className={`flex items-center justify-center rounded-lg bg-muted ${className}`}
+        style={{ aspectRatio: '16 / 9', minHeight: '200px' }}
+      >
+        <span className="text-sm text-muted-foreground">Loading map...</span>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center bg-muted ${className}`} style={{ minHeight: '150px' }}>
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div
+        className={`flex items-center justify-center rounded-lg bg-muted ${className}`}
+        style={{ aspectRatio: '16 / 9', minHeight: '200px' }}
+      >
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error || !imageSrc) {
     return (
-      <div className={`flex flex-col items-center justify-center gap-2 bg-muted text-muted-foreground ${className}`} style={{ minHeight: '150px' }}>
-        <MapPin className="h-6 w-6" />
-        <span className="text-sm">Map unavailable</span>
+      <div
+        className={`flex flex-col items-center justify-center rounded-lg bg-muted ${className}`}
+        style={{ aspectRatio: '16 / 9', minHeight: '200px' }}
+      >
+        <MapPin className="mb-2 h-6 w-6 text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">Unable to load map</p>
         {routeUrl && (
-          <a 
-            href={routeUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline"
-          >
-            View on Google Maps
+          <a href={routeUrl} target="_blank" rel="noopener noreferrer" className="mt-2 text-xs text-primary hover:underline">
+            View in Google Maps
           </a>
         )}
       </div>
     );
   }
 
-  const imageElement = (
+  return (
     <img
       src={imageSrc}
       alt={alt}
-      className={`h-auto w-full ${className}`}
+      className={`rounded-lg object-cover w-full ${className}`}
+      style={{ aspectRatio: '16 / 9' }}
+      loading="lazy"
+      decoding="async"
+      width={800}
+      height={450}
     />
   );
+});
 
-  if (routeUrl) {
-    return (
-      <a href={routeUrl} target="_blank" rel="noopener noreferrer">
-        {imageElement}
-      </a>
-    );
-  }
-
-  return imageElement;
-};
+ProxyMapImage.displayName = 'ProxyMapImage';

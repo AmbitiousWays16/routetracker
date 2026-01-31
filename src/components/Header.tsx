@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Car, LogOut, ClipboardCheck, Users } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { ExportButton } from './ExportButton';
@@ -12,7 +13,7 @@ interface HeaderProps {
   totalMiles: number;
 }
 
-export const Header = ({ trips, totalMiles }: HeaderProps) => {
+export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
   const { signOut, user } = useAuth();
   const { approverRole, pendingVouchers } = useApproverVouchers();
   const { isAdmin } = usePrograms();
@@ -74,4 +75,4 @@ export const Header = ({ trips, totalMiles }: HeaderProps) => {
       </div>
     </header>
   );
-};
+});

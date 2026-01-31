@@ -85,8 +85,8 @@ const Index = () => {
       <ArchivePromptDialog onExportComplete={refetch} />
       <Header trips={trips} totalMiles={totalMiles} />
       
-      <main className="container mx-auto space-y-6 px-4 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <main className="container mx-auto space-y-4 sm:space-y-6 px-2 sm:px-4 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
           {isCurrentMonth && (
             <VoucherSubmitDialog 
@@ -98,7 +98,7 @@ const Index = () => {
         </div>
         <MileageSummary trips={trips} totalMiles={totalMiles} />
         
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           {isCurrentMonth && (
             <TripForm
               onSubmit={handleAddTrip}

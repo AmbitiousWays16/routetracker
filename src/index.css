@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -103,11 +103,22 @@
 @layer base {
   * {
     @apply border-border;
+    /* Touch optimization: prevent double-tap zoom delay */
+    touch-action: manipulation;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Disable hover states on touch devices */
+  @media (hover: none) and (pointer: coarse) {
+    button:hover,
+    a:hover,
+    [role="button"]:hover {
+      @apply hover:bg-transparent hover:text-foreground;
+    }
   }
 }
 
@@ -126,5 +137,20 @@
 
   .shadow-elevated {
     box-shadow: var(--shadow-lg);
+  }
+
+  /* Touch-friendly button sizing */
+  @media (hover: none) and (pointer: coarse) {
+    button,
+    [role="button"] {
+      @apply min-h-[44px] min-w-[44px];
+    }
+  }
+
+  /* Improve form input touch targets */
+  input,
+  textarea,
+  select {
+    @apply text-base; /* Prevents iOS zoom on input focus */
   }
 }
