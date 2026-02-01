@@ -47,17 +47,19 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
     setIsExporting(true);
     
     try {
-      // Fetch user's profile to get full name
+      // Fetch user's profile to get full name and job title
       let employeeName = '';
+      let employeeJobTitle = '';
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) {
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name, email')
+          .select('full_name, job_title, email')
           .eq('user_id', sessionData.session.user.id)
           .maybeSingle();
         
         employeeName = profileData?.full_name || profileData?.email || sessionData.session.user.email || '';
+        employeeJobTitle = profileData?.job_title || '';
       }
 
       // Sort trips by date first so we can derive the export month from the
@@ -348,6 +350,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             ${bannerDataUrl ? `<img class="banner" src="${bannerDataUrl}" alt="" />` : ''}
             <div class="header-content">
               <h1>MILEAGE VOUCHER</h1>
+              ${employeeName ? `<p style="font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px;">${escapeHtml(employeeName)}${employeeJobTitle ? `, ${escapeHtml(employeeJobTitle)}` : ''}</p>` : ''}
               <p>${currentMonth} • Submit by the 10th of the following month</p>
             </div>
           </div>
@@ -451,6 +454,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             ${bannerDataUrl ? `<img class="banner" src="${bannerDataUrl}" alt="" />` : ''}
             <div class="header-content">
               <h1>TRIP ROUTE DETAILS</h1>
+              ${employeeName ? `<p style="font-size: 16px; font-weight: 600; color: #1a1a2e; margin-bottom: 4px;">${escapeHtml(employeeName)}${employeeJobTitle ? `, ${escapeHtml(employeeJobTitle)}` : ''}</p>` : ''}
               <p>${currentMonth} - Individual Trip Documentation</p>
             </div>
           </div>
