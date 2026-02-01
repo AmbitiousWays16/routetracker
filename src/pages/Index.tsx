@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Index = () => {
-  const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth, refetch } = useTrips();
+  const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth, canEdit, refetch } = useTrips();
   const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
 
   const handleCalculateRoute = async (from: string, to: string) => {
@@ -88,7 +88,7 @@ const Index = () => {
       <main className="container mx-auto space-y-4 sm:space-y-6 px-2 sm:px-4 py-4 sm:py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
-          {isCurrentMonth && (
+          {canEdit && (
             <VoucherSubmitDialog 
               selectedMonth={selectedMonth} 
               trips={trips} 
@@ -99,7 +99,7 @@ const Index = () => {
         <MileageSummary trips={trips} totalMiles={totalMiles} />
         
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
-          {isCurrentMonth && (
+          {canEdit && (
             <TripForm
               onSubmit={handleAddTrip}
               onCalculateRoute={handleCalculateRoute}
@@ -115,7 +115,7 @@ const Index = () => {
             trips={trips} 
             onDelete={handleDeleteTrip} 
             totalMiles={totalMiles}
-            isArchiveView={!isCurrentMonth}
+            isArchiveView={!canEdit}
           />
         </div>
       </main>

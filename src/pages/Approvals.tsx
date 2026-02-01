@@ -36,6 +36,7 @@ export default function Approvals() {
   const { pendingVouchers, loading, approverRole, approveVoucher, rejectVoucher } = useApproverVouchers();
   const [selectedVoucher, setSelectedVoucher] = useState<MileageVoucherRecord | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
   const [nextApproverEmail, setNextApproverEmail] = useState('');
   const [accountantEmail, setAccountantEmail] = useState('');
   const [rejectReason, setRejectReason] = useState('');
@@ -46,19 +47,23 @@ export default function Approvals() {
   const [nextEmailError, setNextEmailError] = useState('');
   const [accountantEmailError, setAccountantEmailError] = useState('');
 
-  const fetchEmployeeEmail = async (userId: string) => {
+  const fetchEmployeeData = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('email')
+      .select('email, full_name')
       .eq('user_id', userId)
       .maybeSingle();
-    return data?.email || '';
+    return {
+      email: data?.email || '',
+      name: data?.full_name || ''
+    };
   };
 
   const handleApproveClick = async (voucher: MileageVoucherRecord) => {
     setSelectedVoucher(voucher);
-    const email = await fetchEmployeeEmail(voucher.user_id);
-    setEmployeeEmail(email);
+    const data = await fetchEmployeeData(voucher.user_id);
+    setEmployeeEmail(data.email);
+    setEmployeeName(data.name);
     setNextApproverEmail('');
     setAccountantEmail('');
     setEmailError('');
@@ -69,8 +74,9 @@ export default function Approvals() {
 
   const handleRejectClick = async (voucher: MileageVoucherRecord) => {
     setSelectedVoucher(voucher);
-    const email = await fetchEmployeeEmail(voucher.user_id);
-    setEmployeeEmail(email);
+    const data = await fetchEmployeeData(voucher.user_id);
+    setEmployeeEmail(data.email);
+    setEmployeeName(data.name);
     setRejectReason('');
     setEmailError('');
     setShowRejectDialog(true);
@@ -113,7 +119,7 @@ export default function Approvals() {
       await approveVoucher(
         selectedVoucher,
         employeeEmail.trim(),
-        employeeEmail.trim(),
+        employeeName.trim() || 'Employee',
         nextApproverEmail.trim() || undefined,
         accountantEmail.trim() || undefined
       );
@@ -138,7 +144,7 @@ export default function Approvals() {
       await rejectVoucher(
         selectedVoucher,
         employeeEmail.trim(),
-        employeeEmail.trim(),
+        employeeName.trim() || 'Employee',
         rejectReason.trim()
       );
       setShowRejectDialog(false);

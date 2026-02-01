@@ -3,7 +3,28 @@ import { Trip, RouteMapData } from '@/types/mileage';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { startOfMonth, endOfMonth, format, isSameMonth } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isSameMonth, getDate, isAfter, addMonths } from 'date-fns';
+
+// Helper function: Check if a month can be edited
+// Allows editing current month OR previous month if current date is before the 10th
+export const canEditMonth = (monthDate: Date): boolean => {
+  const today = new Date();
+  const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const selectedMonthStart = startOfMonth(monthDate);
+  
+  // Can always edit current month
+  if (isSameMonth(monthDate, today)) {
+    return true;
+  }
+  
+  // Can edit previous month only if today is before the 10th of current month
+  const previousMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+  if (isSameMonth(monthDate, previousMonth) && getDate(today) < 10) {
+    return true;
+  }
+  
+  return false;
+};
 
 export const useTrips = () => {
   const { user } = useAuth();
@@ -80,6 +101,7 @@ export const useTrips = () => {
   }, []);
 
   const isCurrentMonth = isSameMonth(selectedMonth, new Date());
+  const canEdit = canEditMonth(selectedMonth);
 
   const addTrip = useCallback(async (trip: Omit<Trip, 'id' | 'createdAt'>) => {
     if (!user) {
@@ -137,8 +159,8 @@ export const useTrips = () => {
         createdAt: new Date(data.created_at),
       };
 
-      // Only add to local state if viewing current month
-      if (isCurrentMonth) {
+      // Only add to local state if viewing editable month
+      if (canEdit) {
         setTrips((prev) => [newTrip, ...prev]);
       }
       return newTrip;
@@ -147,7 +169,7 @@ export const useTrips = () => {
       toast.error('Failed to add trip');
       return null;
     }
-  }, [user, isCurrentMonth]);
+  }, [user, canEdit]);
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
@@ -236,5 +258,6 @@ export const useTrips = () => {
     selectedMonth,
     changeMonth,
     isCurrentMonth,
+    canEdit,
   };
 };

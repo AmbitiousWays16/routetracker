@@ -253,9 +253,14 @@ export const useApproverVouchers = () => {
       const isFinalApproval = newStatus === 'approved';
 
       // Update voucher status
+      const updateData: any = { status: newStatus };
+      if (isFinalApproval) {
+        updateData.current_approver_id = null;
+      }
+
       const { error: updateError } = await supabase
         .from('mileage_vouchers')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', voucher.id);
 
       if (updateError) throw updateError;
@@ -326,7 +331,8 @@ export const useApproverVouchers = () => {
         .from('mileage_vouchers')
         .update({ 
           status: 'rejected' as VoucherStatus,
-          rejection_reason: reason
+          rejection_reason: reason,
+          current_approver_id: null
         })
         .eq('id', voucher.id);
 
