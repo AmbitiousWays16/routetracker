@@ -50,12 +50,12 @@ export default function Approvals() {
   const fetchEmployeeData = async (userId: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('email, full_name')
+      .select('email')
       .eq('user_id', userId)
       .maybeSingle();
     return {
       email: data?.email || '',
-      name: data?.full_name || ''
+      name: data?.email?.split('@')[0] || '' // Use email prefix as fallback name
     };
   };
 
