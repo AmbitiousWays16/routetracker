@@ -47,7 +47,16 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
     setIsExporting(true);
     
     try {
-      const currentMonth = format(new Date(), 'MMMM yyyy');
+      // Sort trips by date first so we can derive the export month from the
+      // earliest trip in the selection.
+      const sortedTrips = [...trips].sort(
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+      );
+
+      // Use the month of the exported trips (first trip after sorting) so
+      // exporting a previous month shows the correct month in the header.
+      const exportMonthDate = sortedTrips.length > 0 ? new Date(sortedTrips[0].date) : new Date();
+      const currentMonth = format(exportMonthDate, 'MMMM yyyy');
       const reimbursement = totalMiles * MILEAGE_RATE;
       
       // Convert banner image to base64 for reliable PDF rendering
@@ -64,10 +73,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         bannerDataUrl = '';
       }
       
-      // Sort trips by date
-      const sortedTrips = [...trips].sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      // (sortedTrips already defined above)
 
       // Fetch map images for all trips in parallel (secure server-side fetch)
       // For legacy trips without routeMapData, fetch fresh route data first
