@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from "lucide-react";
+import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { Trip, RouteMapData } from "@/types/mileage";
 import { Program } from "@/hooks/usePrograms";
 import { ProgramManager } from "./ProgramManager";
@@ -13,6 +13,7 @@ import { AddressAutocomplete } from "./AddressAutocomplete";
 import { ProxyMapImage } from "./ProxyMapImage";
 import { z } from "zod";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Input validation schema for trip form
 const tripFormSchema = z.object({
@@ -71,6 +72,8 @@ export const TripForm = ({
   const [isCalculating, setIsCalculating] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
 
   // Optional: structure for per-field error messages (inline UX)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof z.infer<typeof tripFormSchema>, string>>>({});
@@ -107,6 +110,50 @@ export const TripForm = ({
     } finally {
       setIsCalculating(false);
     }
+  };
+
+  const fetchSuggestions = async () => {
+    if (!fromAddress || !toAddress) {
+      toast.error("Please enter addresses before getting suggestions");
+      return;
+    }
+
+    setIsLoadingSuggestions(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        toast.error("Please log in to get suggestions");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('trip-purpose-suggestions', {
+        body: { fromAddress, toAddress, program },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (error) {
+        console.error('Suggestions error:', error);
+        toast.error("Failed to get suggestions");
+        return;
+      }
+
+      if (data?.suggestions && Array.isArray(data.suggestions)) {
+        setSuggestions(data.suggestions);
+        toast.success("AI suggestions loaded!");
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+      toast.error("Failed to get suggestions");
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (suggestion: string) => {
+    setBusinessPurpose(suggestion);
+    setSuggestions([]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,6 +238,7 @@ export const TripForm = ({
       setRouteMapData(null);
       setIsRoundTrip(false);
       setFieldErrors({});
+      setSuggestions([]);
     } finally {
       setIsSubmitting(false);
     }
@@ -324,9 +372,31 @@ export const TripForm = ({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="purpose" className="text-sm font-medium">
-              Business Purpose
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="purpose" className="text-sm font-medium">
+                Business Purpose
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={fetchSuggestions}
+                disabled={!fromAddress || !toAddress || isLoadingSuggestions || isSubmitting}
+                className="h-7 px-2 text-xs text-primary hover:text-primary"
+              >
+                {isLoadingSuggestions ? (
+                  <>
+                    <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    AI Suggest
+                  </>
+                )}
+              </Button>
+            </div>
             <Input
               id="purpose"
               placeholder="Describe the business purpose of this trip"
@@ -335,6 +405,22 @@ export const TripForm = ({
               className="h-10"
               disabled={isSubmitting}
             />
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-2 rounded-lg bg-muted/50 border">
+                {suggestions.map((suggestion, index) => (
+                  <Button
+                    key={index}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                    className="h-auto py-1 px-2 text-xs whitespace-normal text-left"
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            )}
             {fieldErrors.businessPurpose && (
               <p className="text-xs text-destructive mt-1">{fieldErrors.businessPurpose}</p>
             )}
