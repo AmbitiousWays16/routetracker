@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useApproverVouchers } from '@/hooks/useVouchers';
 import { usePrograms } from '@/hooks/usePrograms';
+import { ProfileSettingsDialog } from './ProfileSettingsDialog';
 
 interface HeaderProps {
   trips: Trip[];
@@ -68,6 +69,7 @@ export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
             </Button>
           )}
           {!isApprovalsPage && !isUsersPage && <ExportButton trips={trips} totalMiles={totalMiles} />}
+          <ProfileSettingsDialog />
           <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
             <LogOut className="h-5 w-5" />
           </Button>

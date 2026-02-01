@@ -47,6 +47,19 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
     setIsExporting(true);
     
     try {
+      // Fetch user's profile to get full name
+      let employeeName = '';
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('user_id', sessionData.session.user.id)
+          .maybeSingle();
+        
+        employeeName = profileData?.full_name || profileData?.email || sessionData.session.user.email || '';
+      }
+
       // Sort trips by date first so we can derive the export month from the
       // earliest trip in the selection.
       const sortedTrips = [...trips].sort(
@@ -390,7 +403,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             <h2 class="section-title">Authorization Signatures</h2>
             <div class="signature-grid">
               <div class="signature-box">
-                <div class="title">Employee</div>
+                <div class="title">Employee${employeeName ? `: ${escapeHtml(employeeName)}` : ''}</div>
                 <div class="signature-line">
                   <span>Signature</span>
                   <span>Date</span>
