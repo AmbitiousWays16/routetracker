@@ -151,16 +151,18 @@ const Auth = () => {
   // Show password setting form for invited users
   if (isSettingPassword) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <main className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto mb-4">
-              <img 
-                src={westcareLogo} 
-                alt="WestCare California" 
-                className="mx-auto rounded-lg"
-                style={{ width: '132px', height: '128px' }}
-              />
+            <img 
+              src={westcareLogo} 
+              alt="WestCare California" 
+              className="mx-auto rounded-lg object-contain"
+              width={132}
+              height={128}
+              loading="eager"
+            />
             </div>
             <CardTitle className="text-2xl">Set Your Password</CardTitle>
             <CardDescription>
@@ -211,20 +213,22 @@ const Auth = () => {
             </Button>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4">
             <img 
               src={westcareLogo} 
               alt="WestCare California" 
-              className="mx-auto rounded-lg"
-              style={{ width: '132px', height: '128px' }}
+              className="mx-auto rounded-lg object-contain"
+              width={132}
+              height={128}
+              loading="eager"
             />
           </div>
           <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
@@ -299,7 +303,7 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 };
 
