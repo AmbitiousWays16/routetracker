@@ -17,26 +17,35 @@ export type Database = {
       approval_history: {
         Row: {
           acted_at: string
+          acted_date: string | null
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
+          approver_name: string | null
           approver_role: Database["public"]["Enums"]["app_role"]
           id: string
+          signature_text: string | null
           voucher_id: string
         }
         Insert: {
           acted_at?: string
+          acted_date?: string | null
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
+          approver_name?: string | null
           approver_role: Database["public"]["Enums"]["app_role"]
           id?: string
+          signature_text?: string | null
           voucher_id: string
         }
         Update: {
           acted_at?: string
+          acted_date?: string | null
           action?: Database["public"]["Enums"]["approval_action"]
           approver_id?: string
+          approver_name?: string | null
           approver_role?: Database["public"]["Enums"]["app_role"]
           id?: string
+          signature_text?: string | null
           voucher_id?: string
         }
         Relationships: [
