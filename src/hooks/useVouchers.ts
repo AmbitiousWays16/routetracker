@@ -243,7 +243,9 @@ export const useApproverVouchers = () => {
     employeeEmail: string,
     employeeName: string,
     nextApproverEmail?: string,
-    accountantEmail?: string
+    accountantEmail?: string,
+    signatureText?: string,
+    approverNameForSignature?: string
   ) => {
     if (!user || !approverRole) return false;
 
@@ -265,7 +267,7 @@ export const useApproverVouchers = () => {
 
       if (updateError) throw updateError;
 
-      // Record approval in history
+      // Record approval in history with signature
       const { error: historyError } = await supabase
         .from('approval_history')
         .insert({
@@ -273,6 +275,9 @@ export const useApproverVouchers = () => {
           approver_id: user.id,
           approver_role: approverRole,
           action: 'approve',
+          signature_text: signatureText || null,
+          approver_name: approverNameForSignature || null,
+          acted_date: new Date().toISOString().split('T')[0],
         });
 
       if (historyError) throw historyError;

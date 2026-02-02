@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { CheckCircle, XCircle, User, Calendar, MapPin, Loader2 } from 'lucide-react';
 import { Header } from '@/components/Header';
@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useApproverVouchers } from '@/hooks/useVouchers';
+import { useAuth } from '@/contexts/AuthContext';
 import { MileageVoucherRecord, getRoleDisplayName, getNextApproverRole, getStatusAfterApproval } from '@/types/voucher';
 import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
@@ -33,6 +34,7 @@ import { z } from 'zod';
 const emailSchema = z.string().email('Please enter a valid email address');
 
 export default function Approvals() {
+  const { user } = useAuth();
   const { pendingVouchers, loading, approverRole, approveVoucher, rejectVoucher } = useApproverVouchers();
   const [selectedVoucher, setSelectedVoucher] = useState<MileageVoucherRecord | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState('');
@@ -46,6 +48,23 @@ export default function Approvals() {
   const [emailError, setEmailError] = useState('');
   const [nextEmailError, setNextEmailError] = useState('');
   const [accountantEmailError, setAccountantEmailError] = useState('');
+  const [approverName, setApproverName] = useState('');
+  const [signatureText, setSignatureText] = useState('');
+  const [signatureError, setSignatureError] = useState('');
+
+  // Fetch approver's profile name on mount
+  useEffect(() => {
+    const fetchApproverProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      setApproverName(data?.full_name || data?.email?.split('@')[0] || '');
+    };
+    fetchApproverProfile();
+  }, [user]);
 
   const fetchEmployeeData = async (userId: string) => {
     const { data } = await supabase
@@ -69,6 +88,8 @@ export default function Approvals() {
     setEmailError('');
     setNextEmailError('');
     setAccountantEmailError('');
+    setSignatureText('');
+    setSignatureError('');
     setShowApproveDialog(true);
   };
 
@@ -84,6 +105,12 @@ export default function Approvals() {
 
   const handleApprove = async () => {
     if (!selectedVoucher || !approverRole) return;
+
+    // Validate signature
+    if (!signatureText.trim()) {
+      setSignatureError('Please provide your signature to approve');
+      return;
+    }
 
     // Validate employee email
     const emailResult = emailSchema.safeParse(employeeEmail.trim());
@@ -121,7 +148,9 @@ export default function Approvals() {
         employeeEmail.trim(),
         employeeName.trim() || 'Employee',
         nextApproverEmail.trim() || undefined,
-        accountantEmail.trim() || undefined
+        accountantEmail.trim() || undefined,
+        signatureText.trim(),
+        approverName.trim()
       );
       setShowApproveDialog(false);
     } finally {
@@ -257,6 +286,43 @@ export default function Approvals() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Signature Section */}
+            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
+              <Label htmlFor="approver-name" className="font-medium">Your Name</Label>
+              <Input
+                id="approver-name"
+                value={approverName}
+                onChange={(e) => setApproverName(e.target.value)}
+                placeholder="Enter your full name"
+              />
+              
+              <Label htmlFor="signature" className="font-medium mt-3 block">
+                Your Signature <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <Input
+                  id="signature"
+                  value={signatureText}
+                  onChange={(e) => {
+                    setSignatureText(e.target.value);
+                    setSignatureError('');
+                  }}
+                  placeholder="Type your signature here"
+                  className={`font-['Dancing_Script',_cursive] text-xl h-14 ${signatureError ? 'border-destructive' : ''}`}
+                  style={{ fontFamily: "'Dancing Script', cursive" }}
+                />
+              </div>
+              {signatureText && (
+                <div className="p-3 bg-background rounded border mt-2">
+                  <p className="text-xs text-muted-foreground mb-1">Signature Preview:</p>
+                  <p className="text-2xl text-primary" style={{ fontFamily: "'Dancing Script', cursive" }}>
+                    {signatureText}
+                  </p>
+                </div>
+              )}
+              {signatureError && <p className="text-sm text-destructive">{signatureError}</p>}
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="employee-email">Employee Email</Label>
               <Input

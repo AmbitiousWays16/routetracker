@@ -11,6 +11,14 @@ interface ExportButtonProps {
   totalMiles: number;
 }
 
+interface ApprovalSignature {
+  approver_role: 'supervisor' | 'vp' | 'coo';
+  approver_name: string | null;
+  signature_text: string | null;
+  acted_date: string | null;
+  acted_at: string;
+}
+
 const MILEAGE_RATE = 0.72;
 
 // HTML escape function to prevent XSS in PDF generation
@@ -50,8 +58,10 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       // Fetch user's profile to get full name and job title
       let employeeName = '';
       let employeeJobTitle = '';
+      let userId = '';
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) {
+        userId = sessionData.session.user.id;
         const { data: profileData } = await supabase
           .from('profiles')
           .select('full_name, job_title, email')
@@ -72,7 +82,37 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       // exporting a previous month shows the correct month in the header.
       const exportMonthDate = sortedTrips.length > 0 ? new Date(sortedTrips[0].date) : new Date();
       const currentMonth = format(exportMonthDate, 'MMMM yyyy');
+      const monthStr = format(exportMonthDate, 'yyyy-MM-01');
       const reimbursement = totalMiles * MILEAGE_RATE;
+
+      // Fetch approval signatures for this voucher
+      let approvalSignatures: ApprovalSignature[] = [];
+      if (userId) {
+        // Find the voucher for this month
+        const { data: voucherData } = await supabase
+          .from('mileage_vouchers')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('month', monthStr)
+          .maybeSingle();
+
+        if (voucherData?.id) {
+          // Fetch approval history with signatures
+          const { data: historyData } = await supabase
+            .from('approval_history')
+            .select('approver_role, approver_name, signature_text, acted_date, acted_at')
+            .eq('voucher_id', voucherData.id)
+            .eq('action', 'approve')
+            .order('acted_at', { ascending: true });
+
+          approvalSignatures = (historyData || []) as ApprovalSignature[];
+        }
+      }
+
+      // Helper function to get signature data for a role
+      const getSignatureForRole = (role: 'supervisor' | 'vp' | 'coo'): ApprovalSignature | undefined => {
+        return approvalSignatures.find(s => s.approver_role === role);
+      };
       
       // Convert banner image to base64 for reliable PDF rendering
       let bannerDataUrl = '';
@@ -170,7 +210,11 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         <html>
         <head>
           <title>Mileage Voucher - ${currentMonth}</title>
+          <link rel="preconnect" href="https://fonts.googleapis.com">
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+          <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap" rel="stylesheet">
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;500;600;700&display=swap');
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 40px; color: #1a1a2e; line-height: 1.5; }
             
@@ -284,6 +328,27 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             .signature-line span {
               font-size: 11px;
               color: #64748b;
+            }
+            
+            .signature-display {
+              border-top: 1px solid #1a1a2e;
+              padding-top: 8px;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+            }
+            
+            .cursive-signature {
+              font-family: 'Dancing Script', cursive;
+              font-size: 24px;
+              color: #1e40af;
+              font-weight: 600;
+            }
+            
+            .signature-date {
+              font-size: 12px;
+              color: #374151;
+              font-weight: 500;
             }
             
             .check-amount-box {
@@ -412,27 +477,63 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                   <span>Date</span>
                 </div>
               </div>
-              <div class="signature-box">
-                <div class="title">Supervisor</div>
-                <div class="signature-line">
-                  <span>Signature</span>
-                  <span>Date</span>
-                </div>
-              </div>
-              <div class="signature-box">
-                <div class="title">Deputy Administrator / Vice President</div>
-                <div class="signature-line">
-                  <span>Signature</span>
-                  <span>Date</span>
-                </div>
-              </div>
-              <div class="signature-box">
-                <div class="title">Chief Operations Officer</div>
-                <div class="signature-line">
-                  <span>Signature</span>
-                  <span>Date</span>
-                </div>
-              </div>
+              ${(() => {
+                const supervisorSig = getSignatureForRole('supervisor');
+                return `
+                  <div class="signature-box">
+                    <div class="title">Supervisor${supervisorSig?.approver_name ? `: ${escapeHtml(supervisorSig.approver_name)}` : ''}</div>
+                    ${supervisorSig?.signature_text ? `
+                      <div class="signature-display">
+                        <span class="cursive-signature">${escapeHtml(supervisorSig.signature_text)}</span>
+                        <span class="signature-date">${supervisorSig.acted_date ? format(new Date(supervisorSig.acted_date), 'MM/dd/yyyy') : format(new Date(supervisorSig.acted_at), 'MM/dd/yyyy')}</span>
+                      </div>
+                    ` : `
+                      <div class="signature-line">
+                        <span>Signature</span>
+                        <span>Date</span>
+                      </div>
+                    `}
+                  </div>
+                `;
+              })()}
+              ${(() => {
+                const vpSig = getSignatureForRole('vp');
+                return `
+                  <div class="signature-box">
+                    <div class="title">Deputy Administrator / Vice President${vpSig?.approver_name ? `: ${escapeHtml(vpSig.approver_name)}` : ''}</div>
+                    ${vpSig?.signature_text ? `
+                      <div class="signature-display">
+                        <span class="cursive-signature">${escapeHtml(vpSig.signature_text)}</span>
+                        <span class="signature-date">${vpSig.acted_date ? format(new Date(vpSig.acted_date), 'MM/dd/yyyy') : format(new Date(vpSig.acted_at), 'MM/dd/yyyy')}</span>
+                      </div>
+                    ` : `
+                      <div class="signature-line">
+                        <span>Signature</span>
+                        <span>Date</span>
+                      </div>
+                    `}
+                  </div>
+                `;
+              })()}
+              ${(() => {
+                const cooSig = getSignatureForRole('coo');
+                return `
+                  <div class="signature-box">
+                    <div class="title">Chief Operations Officer${cooSig?.approver_name ? `: ${escapeHtml(cooSig.approver_name)}` : ''}</div>
+                    ${cooSig?.signature_text ? `
+                      <div class="signature-display">
+                        <span class="cursive-signature">${escapeHtml(cooSig.signature_text)}</span>
+                        <span class="signature-date">${cooSig.acted_date ? format(new Date(cooSig.acted_date), 'MM/dd/yyyy') : format(new Date(cooSig.acted_at), 'MM/dd/yyyy')}</span>
+                      </div>
+                    ` : `
+                      <div class="signature-line">
+                        <span>Signature</span>
+                        <span>Date</span>
+                      </div>
+                    `}
+                  </div>
+                `;
+              })()}
             </div>
             
             <div class="check-amount-box">
