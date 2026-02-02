@@ -158,7 +158,8 @@ const Auth = () => {
               <img 
                 src={westcareLogo} 
                 alt="WestCare California" 
-                className="h-32 w-auto mx-auto rounded-lg"
+                className="mx-auto rounded-lg"
+                style={{ width: '132px', height: '128px' }}
               />
             </div>
             <CardTitle className="text-2xl">Set Your Password</CardTitle>
@@ -222,7 +223,8 @@ const Auth = () => {
             <img 
               src={westcareLogo} 
               alt="WestCare California" 
-              className="h-32 w-auto mx-auto rounded-lg"
+              className="mx-auto rounded-lg"
+              style={{ width: '132px', height: '128px' }}
             />
           </div>
           <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
