@@ -4,6 +4,19 @@ import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// HTML escape function to prevent XSS in email templates
+const escapeHtml = (text: string): string => {
+  const map: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+    '/': '&#x2F;'
+  };
+  return text.replace(/[&<>"'\/]/g, (char) => map[char]);
+};
+
 // Allowed origins for CORS
 const allowedOrigins = [
   'https://dumhzvkifwhvdgswplew.supabase.co',
@@ -193,7 +206,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h1 style="color: white; margin: 0; font-size: 24px;">${heading}</h1>
           </div>
           <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-            <p style="margin-top: 0;">Hello${recipientName ? ` ${recipientName}` : ""},</p>
+            <p style="margin-top: 0;">Hello${recipientName ? ` ${escapeHtml(recipientName)}` : ""},</p>
             <p>${getStatusMessage(action, nextApproverRole)}</p>
             
             <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -201,11 +214,11 @@ const handler = async (req: Request): Promise<Response> => {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; color: #666;">Employee:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-weight: 500;">${employeeName}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-weight: 500;">${escapeHtml(employeeName)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; color: #666;">Month:</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-weight: 500;">${month}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-weight: 500;">${escapeHtml(month)}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Total Miles:</td>
@@ -217,7 +230,7 @@ const handler = async (req: Request): Promise<Response> => {
             ${rejectionReason ? `
               <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; margin: 20px 0;">
                 <p style="margin: 0; color: #991b1b;"><strong>Reason for Return:</strong></p>
-                <p style="margin: 10px 0 0 0; color: #7f1d1d;">${rejectionReason}</p>
+                <p style="margin: 10px 0 0 0; color: #7f1d1d;">${escapeHtml(rejectionReason)}</p>
               </div>
             ` : ""}
             
