@@ -1,10 +1,60 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+// Allowed origins for CORS - matching other edge functions
+const allowedOrigins = [
+  'https://dumhzvkifwhvdgswplew.supabase.co',
+  'https://routetracker.lovable.app',
+  'https://triptrackerapp.tech',
+  'https://www.triptrackerapp.tech',
+  'http://localhost:5173',
+  'http://localhost:8080',
+];
+
+// Helper to check if origin is allowed (including Lovable preview/dev domains)
+const isAllowedOrigin = (origin: string | null): boolean => {
+  if (!origin) return false;
+  if (allowedOrigins.includes(origin)) return true;
+  if (origin.endsWith('.lovable.app')) return true;
+  if (origin.endsWith('.lovableproject.com')) return true;
+  return false;
 };
+
+// Get CORS headers with origin validation
+const getCorsHeaders = (origin: string | null) => {
+  const allowedOrigin = isAllowedOrigin(origin) ? origin : allowedOrigins[0];
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin!,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+  };
+};
+
+// Rate limiting configuration
+const RATE_LIMIT_REQUESTS = 20; // Lower limit for expensive AI calls
+const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+// Check rate limit for a user
+const checkRateLimit = (userId: string): { allowed: boolean; remaining: number } => {
+  const now = Date.now();
+  const userLimit = rateLimitMap.get(userId);
+  
+  if (!userLimit || now > userLimit.resetTime) {
+    rateLimitMap.set(userId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true, remaining: RATE_LIMIT_REQUESTS - 1 };
+  }
+  
+  if (userLimit.count >= RATE_LIMIT_REQUESTS) {
+    return { allowed: false, remaining: 0 };
+  }
+  
+  userLimit.count++;
+  return { allowed: true, remaining: RATE_LIMIT_REQUESTS - userLimit.count };
+};
+
+// Input length limits
+const MAX_ADDRESS_LENGTH = 500;
+const MAX_PROGRAM_LENGTH = 200;
 
 interface SuggestionRequest {
   fromAddress: string;
@@ -13,6 +63,9 @@ interface SuggestionRequest {
 }
 
 serve(async (req) => {
+  const origin = req.headers.get('origin');
+  const corsHeaders = getCorsHeaders(origin);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -44,6 +97,20 @@ serve(async (req) => {
       });
     }
 
+    // Check rate limit
+    const rateLimit = checkRateLimit(user.id);
+    if (!rateLimit.allowed) {
+      console.warn('Rate limit exceeded for user');
+      return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
+        status: 429,
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+        },
+      });
+    }
+
     console.log('Authenticated user requesting suggestions');
 
     // Parse request body
@@ -57,6 +124,26 @@ serve(async (req) => {
       });
     }
 
+    // Input length validation
+    if (fromAddress.length > MAX_ADDRESS_LENGTH || toAddress.length > MAX_ADDRESS_LENGTH) {
+      return new Response(JSON.stringify({ error: 'Address input too long' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (program && program.length > MAX_PROGRAM_LENGTH) {
+      return new Response(JSON.stringify({ error: 'Program name too long' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Sanitize inputs - remove any potential injection characters
+    const sanitizedFrom = fromAddress.replace(/[<>\"']/g, '').trim();
+    const sanitizedTo = toAddress.replace(/[<>\"']/g, '').trim();
+    const sanitizedProgram = program ? program.replace(/[<>\"']/g, '').trim() : '';
+
     // Get Perplexity API key
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     if (!perplexityApiKey) {
@@ -68,7 +155,7 @@ serve(async (req) => {
     }
 
     // Create prompt for trip purpose suggestions
-    const prompt = `Given a business trip from "${fromAddress}" to "${toAddress}"${program ? ` for the "${program}" program` : ''}, suggest 5 concise business purpose descriptions that would be appropriate for a mileage reimbursement form. 
+    const prompt = `Given a business trip from "${sanitizedFrom}" to "${sanitizedTo}"${sanitizedProgram ? ` for the "${sanitizedProgram}" program` : ''}, suggest 5 concise business purpose descriptions that would be appropriate for a mileage reimbursement form. 
 
 Each suggestion should be:
 - Professional and specific
@@ -151,7 +238,7 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
     console.error('Edge function error:', error);
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' },
     });
   }
 });
