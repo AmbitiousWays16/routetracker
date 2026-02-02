@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import westcareLogo from '@/assets/westcare-auth-logo.png';
+import westcareLogo from '@/assets/westcare-auth-logo-optimized.webp';
 
 // Strong password validation schema
 const passwordSchema = z
