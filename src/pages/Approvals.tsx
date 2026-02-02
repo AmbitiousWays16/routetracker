@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { CheckCircle, XCircle, User, Calendar, MapPin, Loader2 } from 'lucide-react';
+import { CheckCircle, XCircle, User, Calendar, MapPin, Loader2, Pen, Type } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { SignatureCanvas } from '@/components/SignatureCanvas';
 import { useApproverVouchers } from '@/hooks/useVouchers';
 import { useAuth } from '@/contexts/AuthContext';
 import { MileageVoucherRecord, getRoleDisplayName, getNextApproverRole, getStatusAfterApproval } from '@/types/voucher';
@@ -50,6 +52,8 @@ export default function Approvals() {
   const [accountantEmailError, setAccountantEmailError] = useState('');
   const [approverName, setApproverName] = useState('');
   const [signatureText, setSignatureText] = useState('');
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const [signatureMode, setSignatureMode] = useState<'type' | 'draw'>('type');
   const [signatureError, setSignatureError] = useState('');
 
   // Fetch approver's profile name on mount
@@ -89,6 +93,8 @@ export default function Approvals() {
     setNextEmailError('');
     setAccountantEmailError('');
     setSignatureText('');
+    setSignatureImage(null);
+    setSignatureMode('type');
     setSignatureError('');
     setShowApproveDialog(true);
   };
@@ -106,9 +112,15 @@ export default function Approvals() {
   const handleApprove = async () => {
     if (!selectedVoucher || !approverRole) return;
 
-    // Validate signature
-    if (!signatureText.trim()) {
-      setSignatureError('Please provide your signature to approve');
+    // Validate signature based on mode
+    const hasValidSignature = signatureMode === 'type' 
+      ? signatureText.trim().length > 0 
+      : signatureImage !== null;
+    
+    if (!hasValidSignature) {
+      setSignatureError(signatureMode === 'type' 
+        ? 'Please type your signature to approve' 
+        : 'Please draw your signature to approve');
       return;
     }
 
@@ -141,6 +153,10 @@ export default function Approvals() {
       }
     }
 
+    // Determine signature value: for drawn signatures, store the base64 image
+    // For typed signatures, store the text
+    const signatureValue = signatureMode === 'draw' ? signatureImage : signatureText.trim();
+
     setProcessing(true);
     try {
       await approveVoucher(
@@ -149,7 +165,7 @@ export default function Approvals() {
         employeeName.trim() || 'Employee',
         nextApproverEmail.trim() || undefined,
         accountantEmail.trim() || undefined,
-        signatureText.trim(),
+        signatureValue || '',
         approverName.trim()
       );
       setShowApproveDialog(false);
@@ -285,42 +301,83 @@ export default function Approvals() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto">
             {/* Signature Section */}
-            <div className="space-y-2 p-4 border rounded-lg bg-muted/30">
-              <Label htmlFor="approver-name" className="font-medium">Your Name</Label>
-              <Input
-                id="approver-name"
-                value={approverName}
-                onChange={(e) => setApproverName(e.target.value)}
-                placeholder="Enter your full name"
-              />
-              
-              <Label htmlFor="signature" className="font-medium mt-3 block">
-                Your Signature <span className="text-destructive">*</span>
-              </Label>
-              <div className="relative">
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="space-y-2">
+                <Label htmlFor="approver-name" className="font-medium">Your Name</Label>
                 <Input
-                  id="signature"
-                  value={signatureText}
-                  onChange={(e) => {
-                    setSignatureText(e.target.value);
-                    setSignatureError('');
-                  }}
-                  placeholder="Type your signature here"
-                  className={`font-['Dancing_Script',_cursive] text-xl h-14 ${signatureError ? 'border-destructive' : ''}`}
-                  style={{ fontFamily: "'Dancing Script', cursive" }}
+                  id="approver-name"
+                  value={approverName}
+                  onChange={(e) => setApproverName(e.target.value)}
+                  placeholder="Enter your full name"
                 />
               </div>
-              {signatureText && (
-                <div className="p-3 bg-background rounded border mt-2">
-                  <p className="text-xs text-muted-foreground mb-1">Signature Preview:</p>
-                  <p className="text-2xl text-primary" style={{ fontFamily: "'Dancing Script', cursive" }}>
-                    {signatureText}
-                  </p>
-                </div>
-              )}
-              {signatureError && <p className="text-sm text-destructive">{signatureError}</p>}
+              
+              <div className="space-y-2">
+                <Label className="font-medium">
+                  Your Signature <span className="text-destructive">*</span>
+                </Label>
+                
+                <Tabs value={signatureMode} onValueChange={(v) => {
+                  setSignatureMode(v as 'type' | 'draw');
+                  setSignatureError('');
+                }}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="type" className="gap-2">
+                      <Type className="h-4 w-4" />
+                      Type
+                    </TabsTrigger>
+                    <TabsTrigger value="draw" className="gap-2">
+                      <Pen className="h-4 w-4" />
+                      Draw
+                    </TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="type" className="mt-3">
+                    <div className="space-y-2">
+                      <Input
+                        id="signature"
+                        value={signatureText}
+                        onChange={(e) => {
+                          setSignatureText(e.target.value);
+                          setSignatureError('');
+                        }}
+                        placeholder="Type your signature here"
+                        className={`text-xl h-14 ${signatureError && signatureMode === 'type' ? 'border-destructive' : ''}`}
+                        style={{ fontFamily: "'Dancing Script', cursive" }}
+                      />
+                      {signatureText && (
+                        <div className="p-3 bg-background rounded border">
+                          <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                          <p className="text-2xl text-primary" style={{ fontFamily: "'Dancing Script', cursive" }}>
+                            {signatureText}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="draw" className="mt-3">
+                    <SignatureCanvas 
+                      onSignatureChange={(dataUrl) => {
+                        setSignatureImage(dataUrl);
+                        setSignatureError('');
+                      }}
+                      width={350}
+                      height={120}
+                    />
+                    {signatureImage && (
+                      <div className="p-3 bg-background rounded border mt-2">
+                        <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                        <img src={signatureImage} alt="Your signature" className="max-h-16" />
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+                
+                {signatureError && <p className="text-sm text-destructive">{signatureError}</p>}
+              </div>
             </div>
 
             <div className="space-y-2">

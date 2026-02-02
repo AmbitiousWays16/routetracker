@@ -113,6 +113,40 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       const getSignatureForRole = (role: 'supervisor' | 'vp' | 'coo'): ApprovalSignature | undefined => {
         return approvalSignatures.find(s => s.approver_role === role);
       };
+
+      // Helper to render signature (supports both typed text and drawn images)
+      const renderSignature = (sig: ApprovalSignature | undefined): string => {
+        if (!sig?.signature_text) {
+          return `
+            <div class="signature-line">
+              <span>Signature</span>
+              <span>Date</span>
+            </div>
+          `;
+        }
+
+        const dateStr = sig.acted_date 
+          ? format(new Date(sig.acted_date), 'MM/dd/yyyy') 
+          : format(new Date(sig.acted_at), 'MM/dd/yyyy');
+
+        // Check if it's a base64 image (drawn signature)
+        if (sig.signature_text.startsWith('data:image')) {
+          return `
+            <div class="signature-display">
+              <img src="${sig.signature_text}" alt="Signature" class="drawn-signature" />
+              <span class="signature-date">${dateStr}</span>
+            </div>
+          `;
+        }
+
+        // Otherwise it's typed text
+        return `
+          <div class="signature-display">
+            <span class="cursive-signature">${escapeHtml(sig.signature_text)}</span>
+            <span class="signature-date">${dateStr}</span>
+          </div>
+        `;
+      };
       
       // Convert banner image to base64 for reliable PDF rendering
       let bannerDataUrl = '';
@@ -351,6 +385,11 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               font-weight: 500;
             }
             
+            .drawn-signature {
+              max-height: 50px;
+              width: auto;
+            }
+            
             .check-amount-box {
               margin-top: 30px;
               padding: 20px;
@@ -482,17 +521,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                 return `
                   <div class="signature-box">
                     <div class="title">Supervisor${supervisorSig?.approver_name ? `: ${escapeHtml(supervisorSig.approver_name)}` : ''}</div>
-                    ${supervisorSig?.signature_text ? `
-                      <div class="signature-display">
-                        <span class="cursive-signature">${escapeHtml(supervisorSig.signature_text)}</span>
-                        <span class="signature-date">${supervisorSig.acted_date ? format(new Date(supervisorSig.acted_date), 'MM/dd/yyyy') : format(new Date(supervisorSig.acted_at), 'MM/dd/yyyy')}</span>
-                      </div>
-                    ` : `
-                      <div class="signature-line">
-                        <span>Signature</span>
-                        <span>Date</span>
-                      </div>
-                    `}
+                    ${renderSignature(supervisorSig)}
                   </div>
                 `;
               })()}
@@ -501,17 +530,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                 return `
                   <div class="signature-box">
                     <div class="title">Deputy Administrator / Vice President${vpSig?.approver_name ? `: ${escapeHtml(vpSig.approver_name)}` : ''}</div>
-                    ${vpSig?.signature_text ? `
-                      <div class="signature-display">
-                        <span class="cursive-signature">${escapeHtml(vpSig.signature_text)}</span>
-                        <span class="signature-date">${vpSig.acted_date ? format(new Date(vpSig.acted_date), 'MM/dd/yyyy') : format(new Date(vpSig.acted_at), 'MM/dd/yyyy')}</span>
-                      </div>
-                    ` : `
-                      <div class="signature-line">
-                        <span>Signature</span>
-                        <span>Date</span>
-                      </div>
-                    `}
+                    ${renderSignature(vpSig)}
                   </div>
                 `;
               })()}
@@ -520,17 +539,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                 return `
                   <div class="signature-box">
                     <div class="title">Chief Operations Officer${cooSig?.approver_name ? `: ${escapeHtml(cooSig.approver_name)}` : ''}</div>
-                    ${cooSig?.signature_text ? `
-                      <div class="signature-display">
-                        <span class="cursive-signature">${escapeHtml(cooSig.signature_text)}</span>
-                        <span class="signature-date">${cooSig.acted_date ? format(new Date(cooSig.acted_date), 'MM/dd/yyyy') : format(new Date(cooSig.acted_at), 'MM/dd/yyyy')}</span>
-                      </div>
-                    ` : `
-                      <div class="signature-line">
-                        <span>Signature</span>
-                        <span>Date</span>
-                      </div>
-                    `}
+                    ${renderSignature(cooSig)}
                   </div>
                 `;
               })()}
