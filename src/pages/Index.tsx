@@ -1,5 +1,5 @@
 import { Header } from '@/components/Header';
-import { TripForm } from '@/components/TripForm';
+import { TripEntry } from '@/components/TripEntry';
 import { TripList } from '@/components/TripList';
 import { MileageSummary } from '@/components/MileageSummary';
 import { MonthSelector } from '@/components/MonthSelector';
@@ -100,7 +100,7 @@ const Index = () => {
         
         <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
           {canEdit && (
-            <TripForm
+            <TripEntry
               onSubmit={handleAddTrip}
               onCalculateRoute={handleCalculateRoute}
               programs={programs}
