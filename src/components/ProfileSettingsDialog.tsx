@@ -106,7 +106,7 @@ export const ProfileSettingsDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" title="Profile settings">
+        <Button data-tour="profile-settings" variant="ghost" size="icon" title="Profile settings">
           <User className="h-5 w-5" />
         </Button>
       </DialogTrigger>

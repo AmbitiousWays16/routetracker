@@ -592,6 +592,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
 
   return (
     <Button
+      data-tour="export-button"
       onClick={generatePDF}
       disabled={trips.length === 0 || isExporting}
       className="gradient-primary"

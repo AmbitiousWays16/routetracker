@@ -85,7 +85,7 @@ export const TripList = memo(({ trips, onDelete, totalMiles, isArchiveView = fal
   const sortedTrips = useMemo(() => trips, [trips]);
 
   return (
-    <Card className={`shadow-card animate-fade-in ${isArchiveView ? 'lg:col-span-2' : ''}`}>
+    <Card data-tour="trip-list" className={`shadow-card animate-fade-in ${isArchiveView ? 'lg:col-span-2' : ''}`}>
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg font-semibold">

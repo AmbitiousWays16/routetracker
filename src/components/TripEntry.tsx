@@ -129,7 +129,7 @@ export const TripEntry = ({
 
   return (
     <>
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "manual" | "gps")} className="w-full">
+      <Tabs data-tour="trip-entry" value={activeTab} onValueChange={(v) => setActiveTab(v as "manual" | "gps")} className="w-full">
         <TabsList className="grid w-full grid-cols-2 mb-4">
           <TabsTrigger value="manual" className="flex items-center gap-2">
             <MapPin className="h-4 w-4" />
