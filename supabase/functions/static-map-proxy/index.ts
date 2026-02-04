@@ -230,9 +230,10 @@ serve(async (req) => {
     const response = await fetch(staticMapUrl);
     
     if (!response.ok) {
+      // Log detailed error server-side only - don't expose to client
       console.error("Google Maps API error:", response.status, await response.text());
       return new Response(
-        JSON.stringify({ error: "Failed to fetch map image" }),
+        JSON.stringify({ error: "Map image unavailable. Please try again later." }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

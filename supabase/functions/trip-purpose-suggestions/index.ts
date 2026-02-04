@@ -188,9 +188,10 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
     });
 
     if (!response.ok) {
+      // Log detailed error server-side only - don't expose to client
       const errorText = await response.text();
-      console.error('Perplexity API error:', response.status, errorText);
-      return new Response(JSON.stringify({ error: 'Failed to generate suggestions' }), {
+      console.error('AI service error:', response.status, errorText);
+      return new Response(JSON.stringify({ error: 'Unable to generate suggestions. Please try again later.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

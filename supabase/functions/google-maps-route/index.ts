@@ -224,12 +224,10 @@ serve(async (req) => {
     console.log('Directions API status:', directionsData.status);
 
     if (directionsData.status !== 'OK') {
+      // Log detailed error server-side only - don't expose to client
       console.error('Directions API error:', directionsData.status, directionsData.error_message);
       return new Response(
-        JSON.stringify({ 
-          error: `Could not calculate route: ${directionsData.status}`,
-          details: directionsData.error_message 
-        }),
+        JSON.stringify({ error: 'Unable to calculate route. Please verify the addresses and try again.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
