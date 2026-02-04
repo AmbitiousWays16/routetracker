@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import westcareLogo from '@/assets/westcare-auth-logo-optimized.webp';
+// Use public path for LCP optimization - enables preload discovery
+const westcareLogo = '/images/westcare-auth-logo.webp';
 
 // Strong password validation schema
 const passwordSchema = z
@@ -162,6 +163,7 @@ const Auth = () => {
               width={132}
               height={128}
               loading="eager"
+              fetchPriority="high"
             />
             </div>
             <CardTitle className="text-2xl">Set Your Password</CardTitle>
@@ -229,6 +231,7 @@ const Auth = () => {
               width={132}
               height={128}
               loading="eager"
+              fetchPriority="high"
             />
           </div>
           <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
