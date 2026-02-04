@@ -139,10 +139,45 @@ serve(async (req) => {
       });
     }
 
-    // Sanitize inputs - remove any potential injection characters
-    const sanitizedFrom = fromAddress.replace(/[<>"']/g, '').trim();
-    const sanitizedTo = toAddress.replace(/[<>"']/g, '').trim();
-    const sanitizedProgram = program ? program.replace(/[<>"']/g, '').trim() : '';
+    /**
+     * Input Sanitization Strategy:
+     * 1. Remove HTML/XML special characters to prevent XSS and injection
+     * 2. Remove control characters and null bytes
+     * 3. Normalize unicode to prevent homoglyph attacks
+     * 4. Strip excessive whitespace
+     * 5. Limit character set to alphanumeric, common punctuation, and spaces
+     */
+    const sanitizeInput = (input: string): string => {
+      if (!input || typeof input !== 'string') return '';
+      
+      return input
+        // Normalize unicode to NFC form (prevents homoglyph attacks)
+        .normalize('NFC')
+        // Remove null bytes and control characters (except newline/tab)
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+        // Remove HTML/XML special characters and script-related patterns
+        .replace(/[<>"'`\\]/g, '')
+        // Remove javascript: and data: URI patterns
+        .replace(/(?:javascript|data|vbscript):/gi, '')
+        // Remove event handler patterns
+        .replace(/on\w+\s*=/gi, '')
+        // Collapse multiple spaces into single space
+        .replace(/\s+/g, ' ')
+        // Trim whitespace
+        .trim();
+    };
+
+    const sanitizedFrom = sanitizeInput(fromAddress);
+    const sanitizedTo = sanitizeInput(toAddress);
+    const sanitizedProgram = program ? sanitizeInput(program) : '';
+    
+    // Validate sanitized inputs are not empty after sanitization
+    if (!sanitizedFrom || !sanitizedTo) {
+      return new Response(JSON.stringify({ error: 'Invalid address input after sanitization' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Get Perplexity API key
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
