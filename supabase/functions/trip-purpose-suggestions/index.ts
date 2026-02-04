@@ -140,9 +140,9 @@ serve(async (req) => {
     }
 
     // Sanitize inputs - remove any potential injection characters
-    const sanitizedFrom = fromAddress.replace(/[<>\"']/g, '').trim();
-    const sanitizedTo = toAddress.replace(/[<>\"']/g, '').trim();
-    const sanitizedProgram = program ? program.replace(/[<>\"']/g, '').trim() : '';
+    const sanitizedFrom = fromAddress.replace(/[<>"']/g, '').trim();
+    const sanitizedTo = toAddress.replace(/[<>"']/g, '').trim();
+    const sanitizedProgram = program ? program.replace(/[<>"']/g, '').trim() : '';
 
     // Get Perplexity API key
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');

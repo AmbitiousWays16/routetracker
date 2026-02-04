@@ -14,7 +14,7 @@ const escapeHtml = (text: string): string => {
     "'": '&#x27;',
     '/': '&#x2F;'
   };
-  return text.replace(/[&<>"'\/]/g, (char) => map[char]);
+  return text.replace(/[&<>"'/]/g, (char) => map[char]);
 };
 
 // Allowed origins for CORS

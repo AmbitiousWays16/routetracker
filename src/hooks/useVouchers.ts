@@ -265,7 +265,7 @@ export const useApproverVouchers = () => {
       const isFinalApproval = newStatus === 'approved';
 
       // Update voucher status
-      const updateData: any = { status: newStatus };
+      const updateData: { status: VoucherStatus; current_approver_id?: string | null } = { status: newStatus };
       if (isFinalApproval) {
         updateData.current_approver_id = null;
       }
