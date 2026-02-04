@@ -26,11 +26,8 @@ const allowedOrigins = [
 ];
 
 const getCorsHeaders = (origin: string | null) => {
-  const isAllowed = origin && (
-    allowedOrigins.includes(origin) ||
-    origin.endsWith('.lovable.app') ||
-    origin.endsWith('.lovableproject.com')
-  );
+  // Strict origin matching - no wildcards for production security
+  const isAllowed = origin && allowedOrigins.includes(origin);
   
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],

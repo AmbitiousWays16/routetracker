@@ -11,13 +11,10 @@ const allowedOrigins = [
   'http://localhost:8080',
 ];
 
-// Helper to check if origin is allowed (including Lovable preview/dev domains)
+// Strict origin matching - no wildcards for production security
 const isAllowedOrigin = (origin: string | null): boolean => {
   if (!origin) return false;
-  if (allowedOrigins.includes(origin)) return true;
-  if (origin.endsWith('.lovable.app')) return true;
-  if (origin.endsWith('.lovableproject.com')) return true;
-  return false;
+  return allowedOrigins.includes(origin);
 };
 
 // Get CORS headers with origin validation
