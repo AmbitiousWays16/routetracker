@@ -325,12 +325,12 @@ export const TripForm = ({
                 <MapPin className="h-3.5 w-3.5 text-destructive" />
                 To Address
               </Label>
-              <Input
+              <AddressAutocomplete
                 id="to"
                 placeholder="Enter destination address"
                 value={toAddress}
-                onChange={(e) => setToAddress(e.target.value)}
-                className="h-10"
+                onChange={setToAddress}
+                programs={programs}
                 disabled={isSubmitting}
               />
               {fieldErrors.toAddress && <p className="text-xs text-destructive mt-1">{fieldErrors.toAddress}</p>}
