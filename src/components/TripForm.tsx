@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw, Sparkles } from "lucide-react";
 import { Trip, RouteMapData } from "@/types/mileage";
 import { Program } from "@/hooks/usePrograms";
+import { UserAddress } from "@/hooks/useUserAddresses";
 import { ProgramManager } from "./ProgramManager";
 import { AddressAutocomplete } from "./AddressAutocomplete";
 import { ProxyMapImage } from "./ProxyMapImage";
@@ -49,6 +50,8 @@ interface TripFormProps {
   onAddProgram: (name: string, address: string) => Promise<Program | null>;
   onUpdateProgram: (id: string, updates: { name?: string; address?: string }) => Promise<boolean>;
   onDeleteProgram: (id: string) => Promise<boolean>;
+  userAddresses?: UserAddress[];
+  onSaveAddress?: (name: string, address: string) => Promise<UserAddress | null>;
 }
 
 export const TripForm = ({
@@ -60,6 +63,8 @@ export const TripForm = ({
   onAddProgram,
   onUpdateProgram,
   onDeleteProgram,
+  userAddresses = [],
+  onSaveAddress,
 }: TripFormProps) => {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [fromAddress, setFromAddress] = useState("");
@@ -316,6 +321,8 @@ export const TripForm = ({
                 value={fromAddress}
                 onChange={setFromAddress}
                 programs={programs}
+                userAddresses={userAddresses}
+                onSaveAddress={onSaveAddress}
                 disabled={isSubmitting}
               />
               {fieldErrors.fromAddress && <p className="text-xs text-destructive mt-1">{fieldErrors.fromAddress}</p>}
@@ -331,6 +338,8 @@ export const TripForm = ({
                 value={toAddress}
                 onChange={setToAddress}
                 programs={programs}
+                userAddresses={userAddresses}
+                onSaveAddress={onSaveAddress}
                 disabled={isSubmitting}
               />
               {fieldErrors.toAddress && <p className="text-xs text-destructive mt-1">{fieldErrors.toAddress}</p>}

@@ -4,6 +4,7 @@ import { Navigation, MapPin } from "lucide-react";
 import { TripForm } from "./TripForm";
 import { GPSTracker } from "./GPSTracker";
 import { Program } from "@/hooks/usePrograms";
+import { useUserAddresses } from "@/hooks/useUserAddresses";
 import { Trip, GPSCoordinate, RouteMapData } from "@/types/mileage";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export const TripEntry = ({
   const [gpsCoordinates, setGpsCoordinates] = useState<GPSCoordinate[]>([]);
   const [gpsTotalMiles, setGpsTotalMiles] = useState(0);
   const { saveRoute } = useGPSRoute();
+  const { addresses: userAddresses, addAddress: addUserAddress } = useUserAddresses();
 
   // Form state for GPS trip
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
@@ -149,6 +151,8 @@ export const TripEntry = ({
             onAddProgram={onAddProgram}
             onUpdateProgram={onUpdateProgram}
             onDeleteProgram={onDeleteProgram}
+            userAddresses={userAddresses}
+            onSaveAddress={addUserAddress}
           />
         </TabsContent>
         
