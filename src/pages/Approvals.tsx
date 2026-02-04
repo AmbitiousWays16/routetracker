@@ -27,7 +27,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { SignatureCanvas } from '@/components/SignatureCanvas';
+import { ApproverSelect } from '@/components/ApproverSelect';
 import { useApproverVouchers } from '@/hooks/useVouchers';
+import { useApprovers } from '@/hooks/useApprovers';
 import { useAuth } from '@/contexts/AuthContext';
 import { MileageVoucherRecord, getRoleDisplayName, getNextApproverRole, getStatusAfterApproval } from '@/types/voucher';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,6 +40,7 @@ const emailSchema = z.string().email('Please enter a valid email address');
 export default function Approvals() {
   const { user } = useAuth();
   const { pendingVouchers, loading, approverRole, approveVoucher, rejectVoucher } = useApproverVouchers();
+  const { getVPs, getCOOs, getAccountants, loading: loadingApprovers } = useApprovers();
   const [selectedVoucher, setSelectedVoucher] = useState<MileageVoucherRecord | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState('');
   const [employeeName, setEmployeeName] = useState('');
@@ -397,49 +400,35 @@ export default function Approvals() {
             </div>
 
             {needsNextApprover && (
-              <div className="space-y-2">
-                <Label htmlFor="next-approver-email">
-                  Next Approver Email ({getRoleDisplayName(needsNextApprover)})
-                </Label>
-                <Input
-                  id="next-approver-email"
-                  type="email"
-                  value={nextApproverEmail}
-                  onChange={(e) => {
-                    setNextApproverEmail(e.target.value);
-                    setNextEmailError('');
-                  }}
-                  placeholder={`${needsNextApprover}@westcare.com`}
-                  className={nextEmailError ? 'border-destructive' : ''}
-                />
-                {nextEmailError && <p className="text-sm text-destructive">{nextEmailError}</p>}
-                <p className="text-xs text-muted-foreground">
-                  The {getRoleDisplayName(needsNextApprover)} will be notified to review next.
-                </p>
-              </div>
+              <ApproverSelect
+                label={`Next Approver (${getRoleDisplayName(needsNextApprover)})`}
+                approvers={needsNextApprover === 'vp' ? getVPs() : getCOOs()}
+                value={nextApproverEmail}
+                onChange={(value) => {
+                  setNextApproverEmail(value);
+                  setNextEmailError('');
+                }}
+                placeholder={`Select a ${getRoleDisplayName(needsNextApprover)}`}
+                loading={loadingApprovers}
+                error={nextEmailError}
+                helpText={`The ${getRoleDisplayName(needsNextApprover)} will be notified to review next.`}
+              />
             )}
 
             {isFinalApprover && (
-              <div className="space-y-2">
-                <Label htmlFor="accountant-email">
-                  Accountant Email (Optional)
-                </Label>
-                <Input
-                  id="accountant-email"
-                  type="email"
-                  value={accountantEmail}
-                  onChange={(e) => {
-                    setAccountantEmail(e.target.value);
-                    setAccountantEmailError('');
-                  }}
-                  placeholder="accountant@westcare.com"
-                  className={accountantEmailError ? 'border-destructive' : ''}
-                />
-                {accountantEmailError && <p className="text-sm text-destructive">{accountantEmailError}</p>}
-                <p className="text-xs text-muted-foreground">
-                  The accountant will receive the final approved voucher for processing.
-                </p>
-              </div>
+              <ApproverSelect
+                label="Accountant (Optional)"
+                approvers={getAccountants()}
+                value={accountantEmail}
+                onChange={(value) => {
+                  setAccountantEmail(value);
+                  setAccountantEmailError('');
+                }}
+                placeholder="Select an accountant"
+                loading={loadingApprovers}
+                error={accountantEmailError}
+                helpText="The accountant will receive the final approved voucher for processing."
+              />
             )}
           </div>
 

@@ -11,11 +11,11 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useVouchers } from '@/hooks/useVouchers';
 import { useAuth } from '@/contexts/AuthContext';
+import { useApprovers } from '@/hooks/useApprovers';
+import { ApproverSelect } from '@/components/ApproverSelect';
 import { Trip } from '@/types/mileage';
 import { getStatusDisplayName } from '@/types/voucher';
 import { z } from 'zod';
@@ -31,10 +31,13 @@ const emailSchema = z.string().email('Please enter a valid email address');
 export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: VoucherSubmitDialogProps) {
   const { user } = useAuth();
   const { getOrCreateVoucher, submitVoucher, getVoucherForMonth } = useVouchers();
+  const { getSupervisors, loading: loadingApprovers } = useApprovers();
   const [open, setOpen] = useState(false);
   const [supervisorEmail, setSupervisorEmail] = useState('');
   const [emailError, setEmailError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  const supervisors = getSupervisors();
 
   const existingVoucher = getVoucherForMonth(selectedMonth);
   const canSubmit = trips.length > 0 && (!existingVoucher || existingVoucher.status === 'draft' || existingVoucher.status === 'rejected');
@@ -150,26 +153,20 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="supervisor-email">Supervisor Email</Label>
-            <Input
-              id="supervisor-email"
-              type="email"
-              placeholder="supervisor@westcare.com"
-              value={supervisorEmail}
-              onChange={(e) => {
-                setSupervisorEmail(e.target.value);
-                setEmailError('');
-              }}
-              className={emailError ? 'border-destructive' : ''}
-            />
-            {emailError && (
-              <p className="text-sm text-destructive">{emailError}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Your supervisor will receive an email to review and approve your voucher.
-            </p>
-          </div>
+          <ApproverSelect
+            label="Supervisor"
+            approvers={supervisors}
+            value={supervisorEmail}
+            onChange={(value) => {
+              setSupervisorEmail(value);
+              setEmailError('');
+            }}
+            placeholder="Select a supervisor"
+            loading={loadingApprovers}
+            error={emailError}
+            helpText="Your supervisor will receive an email to review and approve your voucher."
+            required
+          />
         </div>
 
         <DialogFooter>
