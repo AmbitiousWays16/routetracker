@@ -117,6 +117,7 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button 
+          data-tour="submit-voucher"
           disabled={trips.length === 0}
           className="gap-2"
         >

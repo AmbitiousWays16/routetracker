@@ -23,7 +23,7 @@ export const MonthSelector = ({ selectedMonth, onMonthChange }: MonthSelectorPro
   };
 
   return (
-    <div className="flex items-center justify-between rounded-lg border bg-card p-3 shadow-sm">
+    <div data-tour="month-selector" className="flex items-center justify-between rounded-lg border bg-card p-3 shadow-sm">
       <div className="flex items-center gap-2">
         <Archive className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">Viewing:</span>

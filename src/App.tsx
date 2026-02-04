@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { TourProvider } from "@/contexts/TourContext";
+import { TourOverlay } from "@/components/TourOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -84,39 +86,42 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <AuthProvider>
-            <TokenRedirectHandler>
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/auth" element={<Auth />} />
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute>
-                        <Index />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/approvals"
-                    element={
-                      <ProtectedRoute>
-                        <Approvals />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/users"
-                    element={
-                      <ProtectedRoute>
-                        <UserManagement />
-                      </ProtectedRoute>
-                    }
-                  />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </Suspense>
-            </TokenRedirectHandler>
+            <TourProvider>
+              <TourOverlay />
+              <TokenRedirectHandler>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/auth" element={<Auth />} />
+                    <Route
+                      path="/"
+                      element={
+                        <ProtectedRoute>
+                          <Index />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/approvals"
+                      element={
+                        <ProtectedRoute>
+                          <Approvals />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/users"
+                      element={
+                        <ProtectedRoute>
+                          <UserManagement />
+                        </ProtectedRoute>
+                      }
+                    />
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </TokenRedirectHandler>
+            </TourProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
