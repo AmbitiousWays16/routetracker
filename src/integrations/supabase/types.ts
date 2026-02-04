@@ -252,6 +252,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_old_routes: { Args: { months_old?: number }; Returns: number }
+      get_route_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          avg_miles_per_trip: number
+          earliest_trip: string
+          latest_trip: string
+          total_miles: number
+          total_trips: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
