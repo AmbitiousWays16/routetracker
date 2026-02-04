@@ -103,6 +103,9 @@ serve(async (req) => {
   try {
     // === Authentication Check ===
     const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+    console.log('Auth header length:', authHeader?.length || 0);
+    
     if (!authHeader?.startsWith('Bearer ')) {
       console.error('Missing or invalid Authorization header');
       return new Response(
@@ -111,23 +114,42 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Extract the JWT token from the header
+    const token = authHeader.replace('Bearer ', '');
+    console.log('Token length:', token.length);
     
-    if (authError || !user) {
-      console.error('Authentication failed:', authError?.message || 'No user found');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    console.log('Supabase URL configured:', !!supabaseUrl);
+    console.log('Supabase Anon Key configured:', !!supabaseAnonKey);
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    // Use getClaims to validate JWT token (consistent with static-map-proxy)
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    
+    console.log('Auth result - claims present:', !!claimsData?.claims, 'error:', claimsError?.message || 'none');
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('Authentication failed:', claimsError?.message || 'Invalid token');
       return new Response(
         JSON.stringify({ error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const userId = user.id;
+    const userId = claimsData.claims.sub as string;
     console.log("User authenticated successfully");
 
     // === Rate Limiting Check ===
