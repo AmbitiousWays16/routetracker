@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { GPSCoordinate, RouteData } from '@/types/mileage';
 import { toast } from 'sonner';
+import { METERS_PER_MILE } from '@/lib/gpsConstants';
 
 export const useGPSRoute = () => {
   const { user } = useAuth();
@@ -39,6 +40,7 @@ export const useGPSRoute = () => {
         // 2. Save GPS coordinates in batches for better performance
         const BATCH_SIZE = 100;
         const coordinateBatches: GPSCoordinate[][] = [];
+        let failedBatches = 0;
         
         for (let i = 0; i < routeData.coordinates.length; i += BATCH_SIZE) {
           coordinateBatches.push(routeData.coordinates.slice(i, i + BATCH_SIZE));
@@ -63,12 +65,17 @@ export const useGPSRoute = () => {
             .insert(gpsRecords);
 
           if (gpsError) {
-            console.error('Error saving GPS coordinates batch:', gpsError);
-            // Continue with other batches even if one fails
+            console.error(`Error saving GPS coordinates batch ${batchIndex + 1}:`, gpsError);
+            failedBatches++;
           }
         }
 
-        toast.success('Route saved successfully!');
+        if (failedBatches > 0) {
+          console.warn(`${failedBatches} of ${coordinateBatches.length} GPS coordinate batches failed to save`);
+          toast.warning(`Route saved, but ${failedBatches} coordinate batches failed`);
+        } else {
+          toast.success('Route saved successfully!');
+        }
         return route.id;
       } catch (error) {
         console.error('Error saving route:', error);

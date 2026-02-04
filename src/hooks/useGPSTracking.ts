@@ -1,8 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { GPSCoordinate, GPSTrackingState } from '@/types/mileage';
 import { toast } from 'sonner';
+import { METERS_PER_MILE, MIN_DISTANCE_THRESHOLD_METERS } from '@/lib/gpsConstants';
 
-const METERS_PER_MILE = 1609.344;
 const DEFAULT_UPDATE_INTERVAL = 5000; // 5 seconds - battery efficient
 const HIGH_ACCURACY = true;
 
@@ -110,8 +110,8 @@ export const useGPSTracking = (updateInterval: number = DEFAULT_UPDATE_INTERVAL)
         const prevCoord = coordinates[coordinates.length - 2];
         const distance = calculateDistance(prevCoord, newCoordinate);
         
-        // Only add distance if it's significant (> 1 meter) to filter GPS noise
-        if (distance > 1) {
+        // Only add distance if it's significant to filter GPS noise
+        if (distance > MIN_DISTANCE_THRESHOLD_METERS) {
           totalDistance += distance;
         }
       }

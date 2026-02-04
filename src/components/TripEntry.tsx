@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useGPSRoute } from "@/hooks/useGPSRoute";
 import { toast } from "sonner";
+import { METERS_PER_MILE } from "@/lib/gpsConstants";
 
 interface TripEntryProps {
   onSubmit: (trip: Omit<Trip, "id" | "createdAt">) => Promise<unknown> | void;
@@ -73,7 +74,7 @@ export const TripEntry = ({
       // Save GPS route to database
       const routeData = {
         coordinates: gpsCoordinates,
-        totalDistanceMeters: gpsTotalMiles * 1609.344, // Convert miles to meters
+        totalDistanceMeters: gpsTotalMiles * METERS_PER_MILE,
         totalDistanceMiles: gpsTotalMiles,
         startTime: gpsCoordinates[0]?.timestamp || Date.now(),
         endTime: gpsCoordinates[gpsCoordinates.length - 1]?.timestamp || Date.now(),
@@ -97,7 +98,8 @@ export const TripEntry = ({
         miles: gpsTotalMiles,
         routeUrl: `GPS Route (${gpsCoordinates.length} points)`,
         routeMapData: {
-          encodedPolyline: '', // We'll store actual GPS data instead
+          // GPS data is stored in gps_coordinates table, not as encoded polyline
+          encodedPolyline: '',
           startLat: gpsCoordinates[0]?.latitude || 0,
           startLng: gpsCoordinates[0]?.longitude || 0,
           endLat: gpsCoordinates[gpsCoordinates.length - 1]?.latitude || 0,
