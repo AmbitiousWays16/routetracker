@@ -169,6 +169,8 @@ export const useApproverVouchers = () => {
   const [pendingVouchers, setPendingVouchers] = useState<MileageVoucherRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [approverRole, setApproverRole] = useState<ApproverRole | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 20; // Paginate 20 vouchers per load
 
   const fetchApproverRole = useCallback(async () => {
     if (!user) return null;
@@ -193,7 +195,7 @@ export const useApproverVouchers = () => {
     }
   }, [user]);
 
-  const fetchPendingVouchers = useCallback(async () => {
+  const fetchPendingVouchers = useCallback(async (reset = false) => {
     if (!user) {
       setPendingVouchers([]);
       setLoading(false);
@@ -211,17 +213,25 @@ export const useApproverVouchers = () => {
         return;
       }
 
+      if (reset) setPageIndex(0);
+      const currentPage = reset ? 0 : pageIndex;
+
       const statusMap: Record<ApproverRole, VoucherStatus> = {
         supervisor: 'pending_supervisor',
         vp: 'pending_vp',
         coo: 'pending_coo',
       };
 
+      // Optimized query: join with users table to get employee details in single fetch
       const { data, error } = await supabase
         .from('mileage_vouchers')
-        .select('*')
+        .select(`
+          *,
+          user:user_id(id, email, raw_user_meta_data)
+        `)
         .eq('status', statusMap[role])
-        .order('submitted_at', { ascending: true });
+        .order('submitted_at', { ascending: true })
+        .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
 
       if (error) throw error;
 
@@ -232,7 +242,7 @@ export const useApproverVouchers = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, fetchApproverRole]);
+  }, [user, fetchApproverRole, pageIndex]);
 
   useEffect(() => {
     fetchPendingVouchers();
@@ -384,6 +394,9 @@ export const useApproverVouchers = () => {
     pendingVouchers,
     loading,
     approverRole,
+    pageIndex,
+    pageSize,
+    setPageIndex,
     fetchPendingVouchers,
     approveVoucher,
     rejectVoucher,
