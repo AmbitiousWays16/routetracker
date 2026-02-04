@@ -222,20 +222,40 @@ export const useApproverVouchers = () => {
         coo: 'pending_coo',
       };
 
-      // Optimized query: join with users table to get employee details in single fetch
-      const { data, error } = await supabase
+      // Fetch pending vouchers
+      const { data: vouchersData, error: vouchersError } = await supabase
         .from('mileage_vouchers')
-        .select(`
-          *,
-          user:user_id(id, email, raw_user_meta_data)
-        `)
+        .select('*')
         .eq('status', statusMap[role])
         .order('submitted_at', { ascending: true })
         .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);
 
-      if (error) throw error;
+      if (vouchersError) throw vouchersError;
 
-      setPendingVouchers((data || []) as MileageVoucherRecord[]);
+      // Fetch profile info for voucher owners
+      const userIds = [...new Set((vouchersData || []).map(v => v.user_id))];
+      let profilesMap: Record<string, { email: string | null; full_name: string | null }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, email, full_name')
+          .in('user_id', userIds);
+        
+        profilesMap = (profilesData || []).reduce((acc, p) => {
+          acc[p.user_id] = { email: p.email, full_name: p.full_name };
+          return acc;
+        }, {} as Record<string, { email: string | null; full_name: string | null }>);
+      }
+
+      // Enrich vouchers with profile data
+      const enrichedVouchers = (vouchersData || []).map(v => ({
+        ...v,
+        user_email: profilesMap[v.user_id]?.email || null,
+        user_full_name: profilesMap[v.user_id]?.full_name || null,
+      }));
+
+      setPendingVouchers(enrichedVouchers as MileageVoucherRecord[]);
     } catch (error) {
       console.error('Error fetching pending vouchers:', error);
       toast.error('Failed to load pending vouchers');
