@@ -1,4 +1,10 @@
-# Welcome to your Lovable project
+# RouteTracker - Mileage Reimbursement Tracking
+
+![CI](https://github.com/AmbitiousWays16/routetracker/workflows/CI/badge.svg)
+![Deploy to Production](https://github.com/AmbitiousWays16/routetracker/workflows/Deploy%20to%20Production/badge.svg)
+![Security Scan](https://github.com/AmbitiousWays16/routetracker/workflows/Security%20Scan/badge.svg)
+
+A comprehensive mileage reimbursement tracking application with multi-tier approval workflow.
 
 ## Project info
 
@@ -71,3 +77,44 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## CI/CD Pipeline
+
+This project uses GitHub Actions for continuous integration and deployment.
+
+### Available Workflows
+
+- **CI**: Runs linting, tests, and builds on every push and PR
+- **Deploy to Staging**: Automatically deploys to staging environment from `develop` branch
+- **Deploy to Production**: Deploys to production from `main` branch (requires approval)
+- **Release**: Creates versioned releases with automated changelog
+- **Security Scan**: Daily security scans for dependencies and code vulnerabilities
+
+### Quick Start
+
+```sh
+# Run tests locally
+npm test
+
+# Run linter
+npm run lint
+
+# Build for production
+npm run build
+```
+
+### Documentation
+
+- [CI/CD Pipeline Documentation](docs/CICD.md) - Complete guide to the CI/CD workflows
+- [Deployment Guide](DEPLOYMENT.md) - Deployment procedures, rollback, and monitoring
+- [Environment Variables](.env.example) - Required environment variables
+
+### Deployment
+
+Deployments are automated through GitHub Actions:
+
+1. **Staging**: Merge to `develop` branch → automatic deployment
+2. **Production**: Merge to `main` branch → automatic deployment (with approval)
+3. **Releases**: Create via workflow or commit with `[release]` tag
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed procedures.
