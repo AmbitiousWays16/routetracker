@@ -208,12 +208,12 @@ export default function Approvals() {
     <div className="min-h-screen bg-background">
       <Header trips={[]} totalMiles={0} />
       
-      <main className="container mx-auto space-y-6 px-4 py-6">
-        <div className="flex items-center justify-between">
+      <main className="container mx-auto space-y-4 sm:space-y-6 px-4 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Approval Queue</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Approval Queue</h1>
             {approverRole && (
-              <p className="text-muted-foreground">
+              <p className="text-sm sm:text-base text-muted-foreground">
                 Reviewing as {getRoleDisplayName(approverRole)}
               </p>
             )}
@@ -225,7 +225,7 @@ export default function Approvals() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : !approverRole ? (
-          <Card>
+          <Card className="shadow-card animate-fade-in">
             <CardContent className="py-12 text-center">
               <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No Approver Role</h3>
@@ -235,7 +235,7 @@ export default function Approvals() {
             </CardContent>
           </Card>
         ) : pendingVouchers.length === 0 ? (
-          <Card>
+          <Card className="shadow-card animate-fade-in">
             <CardContent className="py-12 text-center">
               <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
               <h3 className="text-lg font-medium mb-2">All Caught Up!</h3>
@@ -245,35 +245,39 @@ export default function Approvals() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {pendingVouchers.map((voucher) => (
-              <Card key={voucher.id}>
+          <div className="grid gap-4 animate-fade-in">
+            {pendingVouchers.map((voucher, index) => (
+              <Card 
+                key={voucher.id}
+                className="shadow-card hover:shadow-elevated transition-all"
+                style={{ animationDelay: `${index * 75}ms` }}
+              >
                 <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5" />
-                        {format(new Date(voucher.month), 'MMMM yyyy')}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <Calendar className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                        <span className="truncate">{format(new Date(voucher.month), 'MMMM yyyy')}</span>
                       </CardTitle>
-                      <CardDescription>
+                      <CardDescription className="text-xs sm:text-sm mt-1">
                         Submitted {voucher.submitted_at ? format(new Date(voucher.submitted_at), 'MMM d, yyyy h:mm a') : 'N/A'}
                       </CardDescription>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">{voucher.total_miles.toFixed(1)}</div>
-                      <div className="text-sm text-muted-foreground">miles</div>
+                    <div className="text-left sm:text-right">
+                      <div className="text-2xl sm:text-3xl font-bold text-primary">{voucher.total_miles.toFixed(1)}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">miles</div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <MapPin className="h-4 w-4" />
-                    <span>Employee ID: {voucher.user_id.slice(0, 8)}...</span>
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground mb-4">
+                    <MapPin className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="truncate">Employee ID: {voucher.user_id.slice(0, 8)}...</span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <Button
                       onClick={() => handleApproveClick(voucher)}
-                      className="gap-2"
+                      className="gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
                     >
                       <CheckCircle className="h-4 w-4" />
                       Approve
@@ -281,7 +285,7 @@ export default function Approvals() {
                     <Button
                       variant="destructive"
                       onClick={() => handleRejectClick(voucher)}
-                      className="gap-2"
+                      className="gap-2 transition-all hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
                     >
                       <XCircle className="h-4 w-4" />
                       Return for Corrections

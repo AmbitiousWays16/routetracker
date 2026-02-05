@@ -153,27 +153,29 @@ const Auth = () => {
   if (isSettingPassword) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4">
+        <Card className="w-full max-w-md shadow-elevated animate-fade-in">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto">
             <img 
               src={westcareLogo} 
               alt="WestCare California" 
-              className="mx-auto rounded-lg object-contain"
+              className="mx-auto rounded-lg object-contain transition-transform hover:scale-105"
               width={132}
               height={128}
               loading="eager"
               fetchPriority="high"
             />
             </div>
-            <CardTitle className="text-2xl">Set Your Password</CardTitle>
-            <CardDescription>
-              Welcome! Please create a password for your account.
-            </CardDescription>
+            <div className="space-y-2">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">Set Your Password</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Welcome! Please create a password for your account.
+              </CardDescription>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="set-email">Email</Label>
+              <Label htmlFor="set-email" className="text-sm font-medium">Email</Label>
               <Input
                 id="set-email"
                 type="email"
@@ -183,30 +185,34 @@ const Auth = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="set-password">New Password</Label>
+              <Label htmlFor="set-password" className="text-sm font-medium">New Password</Label>
               <Input
                 id="set-password"
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                className="transition-all focus:ring-2"
+                autoComplete="new-password"
               />
               <p className="text-xs text-muted-foreground">
                 Must be at least 8 characters with uppercase, lowercase, number, and special character.
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm Password</Label>
               <Input
                 id="confirm-password"
                 type="password"
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                className="transition-all focus:ring-2"
+                autoComplete="new-password"
               />
             </div>
             <Button
-              className="w-full"
+              className="w-full mt-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
               onClick={handleSetPassword}
               disabled={isSubmitting}
             >
@@ -221,51 +227,59 @@ const Auth = () => {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
+      <Card className="w-full max-w-md shadow-elevated animate-fade-in">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto">
             <img 
               src={westcareLogo} 
               alt="WestCare California" 
-              className="mx-auto rounded-lg object-contain"
+              className="mx-auto rounded-lg object-contain transition-transform hover:scale-105"
               width={132}
               height={128}
               loading="eager"
               fetchPriority="high"
             />
           </div>
-          <CardTitle className="text-2xl">Mileage Tracker</CardTitle>
-          <CardDescription>Track your WestCare mileage for reimbursement</CardDescription>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl sm:text-3xl font-bold">Mileage Tracker</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
+              Track your WestCare mileage for reimbursement
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="signin">Sign In</TabsTrigger>
-              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="signin" className="text-sm sm:text-base">Sign In</TabsTrigger>
+              <TabsTrigger value="signup" className="text-sm sm:text-base">Sign Up</TabsTrigger>
             </TabsList>
-            <TabsContent value="signin" className="space-y-4 pt-4">
+            <TabsContent value="signin" className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label htmlFor="signin-email">Email</Label>
+                <Label htmlFor="signin-email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="signin-email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="transition-all focus:ring-2"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signin-password">Password</Label>
+                <Label htmlFor="signin-password" className="text-sm font-medium">Password</Label>
                 <Input
                   id="signin-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="transition-all focus:ring-2"
+                  autoComplete="current-password"
                 />
               </div>
               <Button
-                className="w-full"
+                className="w-full mt-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 onClick={() => handleAuth('signin')}
                 disabled={isSubmitting}
               >
@@ -273,29 +287,33 @@ const Auth = () => {
                 Sign In
               </Button>
             </TabsContent>
-            <TabsContent value="signup" className="space-y-4 pt-4">
+            <TabsContent value="signup" className="space-y-4 pt-2">
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-email" className="text-sm font-medium">Email</Label>
                 <Input
                   id="signup-email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="transition-all focus:ring-2"
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
+                <Label htmlFor="signup-password" className="text-sm font-medium">Password</Label>
                 <Input
                   id="signup-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="transition-all focus:ring-2"
+                  autoComplete="new-password"
                 />
               </div>
               <Button
-                className="w-full"
+                className="w-full mt-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 onClick={() => handleAuth('signup')}
                 disabled={isSubmitting}
               >

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TourProvider } from "@/contexts/TourContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TourOverlay } from "@/components/TourOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
@@ -96,6 +97,9 @@ const App = () => {
 
   return (
     <ErrorBoundary>
+const App = () => (
+  <ErrorBoundary>
+    <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
@@ -144,5 +148,8 @@ const App = () => {
     </ErrorBoundary>
   );
 };
+    </ThemeProvider>
+  </ErrorBoundary>
+);
 
 export default App;
