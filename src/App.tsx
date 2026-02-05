@@ -11,10 +11,19 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
-// Lazy load pages for code splitting
+// Lazy load pages for code splitting with prefetch
 const Index = lazy(() => import("./pages/Index"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
+
+// Prefetch likely next pages
+const prefetchPages = () => {
+  // Prefetch main pages after initial load
+  setTimeout(() => {
+    import("./pages/Index");
+    import("./pages/Approvals");
+  }, 2000);
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -79,54 +88,61 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <AuthProvider>
-            <TourProvider>
-              <TourOverlay />
-              <TokenRedirectHandler>
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route
-                      path="/"
-                      element={
-                        <ProtectedRoute>
-                          <Index />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/approvals"
-                      element={
-                        <ProtectedRoute>
-                          <Approvals />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/users"
-                      element={
-                        <ProtectedRoute>
-                          <UserManagement />
-                        </ProtectedRoute>
-                      }
-                    />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </TokenRedirectHandler>
-            </TourProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
+const App = () => {
+  // Prefetch pages after app loads
+  useEffect(() => {
+    prefetchPages();
+  }, []);
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <AuthProvider>
+              <TourProvider>
+                <TourOverlay />
+                <TokenRedirectHandler>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route
+                        path="/"
+                        element={
+                          <ProtectedRoute>
+                            <Index />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/approvals"
+                        element={
+                          <ProtectedRoute>
+                            <Approvals />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/users"
+                        element={
+                          <ProtectedRoute>
+                            <UserManagement />
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </TokenRedirectHandler>
+              </TourProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
 
 export default App;

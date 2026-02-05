@@ -113,15 +113,16 @@ export const ProxyMapImage = memo(({
     };
   }, [shouldLoad, routeMapData]);
 
-  // Placeholder while waiting to load
+  // Placeholder while waiting to load - with skeleton animation
   if (!shouldLoad) {
     return (
       <div
         ref={observerRef}
-        className={`flex items-center justify-center rounded-lg bg-muted ${className}`}
+        className={`relative flex items-center justify-center rounded-lg bg-muted overflow-hidden ${className}`}
         style={{ aspectRatio: '16 / 9', minHeight: '200px' }}
       >
-        <span className="text-sm text-muted-foreground">Loading map...</span>
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <MapPin className="h-8 w-8 text-muted-foreground/50" />
       </div>
     );
   }
@@ -129,9 +130,10 @@ export const ProxyMapImage = memo(({
   if (loading) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg bg-muted ${className}`}
+        className={`relative flex items-center justify-center rounded-lg bg-muted overflow-hidden ${className}`}
         style={{ aspectRatio: '16 / 9', minHeight: '200px' }}
       >
+        <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
       </div>
     );
