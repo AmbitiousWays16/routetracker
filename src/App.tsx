@@ -12,10 +12,19 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
-// Lazy load pages for code splitting
+// Lazy load pages for code splitting with prefetch
 const Index = lazy(() => import("./pages/Index"));
 const Approvals = lazy(() => import("./pages/Approvals"));
 const UserManagement = lazy(() => import("./pages/UserManagement"));
+
+// Prefetch likely next pages
+const prefetchPages = () => {
+  // Prefetch main pages after initial load
+  setTimeout(() => {
+    import("./pages/Index");
+    import("./pages/Approvals");
+  }, 2000);
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,6 +89,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const App = () => {
+  // Prefetch pages after app loads
+  useEffect(() => {
+    prefetchPages();
+  }, []);
+
+  return (
+    <ErrorBoundary>
 const App = () => (
   <ErrorBoundary>
     <ThemeProvider>
@@ -128,6 +145,9 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </QueryClientProvider>
+    </ErrorBoundary>
+  );
+};
     </ThemeProvider>
   </ErrorBoundary>
 );

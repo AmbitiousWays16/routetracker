@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { startOfMonth, endOfMonth, format, isSameMonth, getDate, isAfter, addMonths } from 'date-fns';
+import { markStart, markEnd } from '@/lib/performance';
 
 // Helper function: Check if a month can be edited
 // Allows editing current month OR previous month if current date is before the 10th
@@ -40,6 +41,7 @@ export const useTrips = () => {
     }
 
     try {
+      markStart('fetchTrips');
       setLoading(true);
       // Get month boundaries for the selected month
       const monthStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
@@ -84,6 +86,7 @@ export const useTrips = () => {
       });
 
       setTrips(formattedTrips);
+      markEnd('fetchTrips');
     } catch (error) {
       console.error('Error fetching trips:', error);
       toast.error('Failed to load trips');
