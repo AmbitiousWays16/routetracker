@@ -26,28 +26,45 @@ export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
   const isUsersPage = location.pathname === '/users';
 
   return (
-    <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm">
-      <div className="container mx-auto flex items-center justify-between px-4 py-4">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-3">
-            <img src={mileageTrackerIcon} alt="Mileage Tracker" className="h-10 w-10 rounded-xl object-cover" />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">Mileage Tracker</h1>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
+    <header className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur-sm shadow-sm transition-all">
+      <div className="container mx-auto flex items-center justify-between px-4 py-3 sm:py-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <img 
+              src={mileageTrackerIcon} 
+              alt="Mileage Tracker" 
+              className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl object-cover flex-shrink-0 transition-transform hover:scale-105" 
+            />
+            <div className="min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-foreground truncate">Mileage Tracker</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">{user?.email}</p>
             </div>
           </Link>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           {isAdmin && (
             <Button
               variant={isUsersPage ? "secondary" : "outline"}
               size="sm"
               asChild
-              className="gap-2"
+              className="gap-1 sm:gap-2 hidden sm:flex"
             >
               <Link to="/users">
                 <Users className="h-4 w-4" />
-                Users
+                <span className="hidden md:inline">Users</span>
+              </Link>
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant={isUsersPage ? "secondary" : "ghost"}
+              size="icon"
+              asChild
+              className="sm:hidden"
+              title="User Management"
+            >
+              <Link to="/users">
+                <Users className="h-4 w-4" />
               </Link>
             </Button>
           )}
@@ -56,13 +73,31 @@ export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
               variant={isApprovalsPage ? "secondary" : "outline"}
               size="sm"
               asChild
-              className="gap-2"
+              className="gap-1 sm:gap-2 hidden sm:flex"
             >
               <Link to="/approvals">
                 <ClipboardCheck className="h-4 w-4" />
-                Approvals
+                <span className="hidden md:inline">Approvals</span>
                 {pendingVouchers.length > 0 && (
                   <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+                    {pendingVouchers.length}
+                  </span>
+                )}
+              </Link>
+            </Button>
+          )}
+          {approverRole && (
+            <Button
+              variant={isApprovalsPage ? "secondary" : "ghost"}
+              size="icon"
+              asChild
+              className="sm:hidden relative"
+              title="Approvals"
+            >
+              <Link to="/approvals">
+                <ClipboardCheck className="h-4 w-4" />
+                {pendingVouchers.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground">
                     {pendingVouchers.length}
                   </span>
                 )}
@@ -73,8 +108,14 @@ export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
           <TourHelpButton />
           <ThemeToggle />
           <ProfileSettingsDialog />
-          <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
-            <LogOut className="h-5 w-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={signOut} 
+            title="Sign out"
+            className="transition-all hover:scale-110"
+          >
+            <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
         </div>
       </div>
