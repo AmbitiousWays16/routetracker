@@ -52,12 +52,39 @@ const checkRateLimit = (userId: string): { allowed: boolean; remaining: number }
 // Input length limits
 const MAX_ADDRESS_LENGTH = 500;
 const MAX_PROGRAM_LENGTH = 200;
+const MAX_JOB_TITLE_LENGTH = 100;
 
 interface SuggestionRequest {
   fromAddress: string;
   toAddress: string;
   program: string;
+  jobTitle?: string;
 }
+
+// WestCare organizational context for AI suggestions
+const ORGANIZATIONAL_CONTEXT = `
+Organization: WestCare - A behavioral health and social services nonprofit
+Mission: Empowering people to engage in healing, growth, and change
+Vision: Uplifting the Human Spirit
+
+Core Services:
+- Mental health and wellness services
+- Substance use treatment and rehabilitation
+- Criminal justice programs and jail deflection
+- Veteran services and support programs
+- Housing support and recovery housing
+- Domestic violence intervention
+- Community outreach and prevention
+
+Common Travel Activities by Role:
+- Clinical Staff: Client assessments, counseling sessions, crisis intervention, treatment planning
+- Case Managers: Home visits, court appearances, client advocacy, resource coordination
+- Program Directors: Site inspections, staff supervision, compliance reviews, partnership meetings
+- Outreach Workers: Community events, mobile service delivery, prevention programs
+- Medical Staff: Patient screenings, medication monitoring, healthcare coordination
+- Residential Staff: Facility inspections, resident transport, shift coverage at locations
+- Administrative: Coordination meetings, grant reporting, interagency collaboration
+`;
 
 serve(async (req) => {
   const origin = req.headers.get('origin');
@@ -112,7 +139,7 @@ serve(async (req) => {
 
     // Parse request body
     const body: SuggestionRequest = await req.json();
-    const { fromAddress, toAddress, program } = body;
+    const { fromAddress, toAddress, program, jobTitle } = body;
 
     if (!fromAddress || !toAddress) {
       return new Response(JSON.stringify({ error: 'From and To addresses are required' }), {
@@ -131,6 +158,14 @@ serve(async (req) => {
 
     if (program && program.length > MAX_PROGRAM_LENGTH) {
       return new Response(JSON.stringify({ error: 'Program name too long' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Job title length validation
+    if (jobTitle && jobTitle.length > MAX_JOB_TITLE_LENGTH) {
+      return new Response(JSON.stringify({ error: 'Job title too long' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -167,6 +202,7 @@ serve(async (req) => {
     const sanitizedFrom = sanitizeInput(fromAddress);
     const sanitizedTo = sanitizeInput(toAddress);
     const sanitizedProgram = program ? sanitizeInput(program) : '';
+    const sanitizedJobTitle = jobTitle ? sanitizeInput(jobTitle) : '';
     
     // Validate sanitized inputs are not empty after sanitization
     if (!sanitizedFrom || !sanitizedTo) {
@@ -187,15 +223,24 @@ serve(async (req) => {
     }
 
     // Create prompt for trip purpose suggestions
-    const prompt = `Given a business trip from "${sanitizedFrom}" to "${sanitizedTo}"${sanitizedProgram ? ` for the "${sanitizedProgram}" program` : ''}, suggest 5 concise business purpose descriptions that would be appropriate for a mileage reimbursement form. 
+    const roleContext = sanitizedJobTitle 
+      ? `\nThe staff member's role is: ${sanitizedJobTitle}. Tailor suggestions to activities typical for this role.`
+      : '';
 
-Each suggestion should be:
+    const prompt = `Given a business trip from "${sanitizedFrom}" to "${sanitizedTo}"${sanitizedProgram ? ` for the "${sanitizedProgram}" program` : ''}${roleContext}
+
+${ORGANIZATIONAL_CONTEXT}
+
+Generate 5 concise business purpose descriptions appropriate for a mileage reimbursement form.
+
+Requirements:
 - Professional and specific
 - 5-15 words long
-- Related to typical business activities (client meetings, site visits, training, deliveries, etc.)
+- Relevant to the organization's mission and the staff member's role
+- Related to typical WestCare activities (client services, site visits, training, outreach, etc.)
 
 Return ONLY a JSON array of 5 strings, no other text. Example format:
-["Client meeting at downtown office", "Site inspection for quarterly review", "Training session delivery", "Equipment delivery and setup", "Staff supervision and quality check"]`;
+["Client home visit for case management follow-up", "Site inspection for program compliance review", "Training session delivery for staff development", "Community outreach event for prevention program", "Court appearance for client advocacy support"]`;
 
     console.log('Requesting AI suggestions from Perplexity');
 
@@ -210,7 +255,7 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful assistant that generates professional business trip purpose descriptions for mileage reimbursement forms. Always respond with valid JSON arrays only.' 
+            content: 'You are a helpful assistant that generates professional business trip purpose descriptions for mileage reimbursement forms at WestCare, a behavioral health and social services organization. Generate descriptions that reflect the organization\'s mission of empowering healing and growth. Always respond with valid JSON arrays only.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -248,9 +293,9 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
       suggestions = [
         'Client meeting and consultation',
         'Site visit for program support',
-        'Staff training and supervision',
-        'Service delivery and follow-up',
-        'Administrative coordination meeting',
+        'Staff training and development session',
+        'Community outreach and service delivery',
+        'Case management and client follow-up',
       ];
     }
 
