@@ -11,10 +11,22 @@ import { useTheme } from '@/contexts/ThemeContext';
 export const ThemeToggle = () => {
   const { theme, setTheme, effectiveTheme } = useTheme();
 
+  const getThemeLabel = () => {
+    if (theme === 'system') {
+      return `System (${effectiveTheme})`;
+    }
+    return theme.charAt(0).toUpperCase() + theme.slice(1);
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" title="Toggle theme">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          title={`Current theme: ${getThemeLabel()}. Click to change theme`}
+          aria-label={`Current theme: ${getThemeLabel()}. Click to change theme`}
+        >
           {effectiveTheme === 'dark' ? (
             <Moon className="h-5 w-5" />
           ) : (

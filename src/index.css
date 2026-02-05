@@ -123,7 +123,13 @@
   }
 
   /* Smooth transitions for theme-aware elements */
-  * {
+  button,
+  a,
+  [role="button"],
+  .card,
+  input,
+  textarea,
+  select {
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   }
 
