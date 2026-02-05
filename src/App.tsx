@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TourProvider } from "@/contexts/TourContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TourOverlay } from "@/components/TourOverlay";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
@@ -81,51 +82,53 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <BrowserRouter>
-          <AuthProvider>
-            <TourProvider>
-              <TourOverlay />
-              <TokenRedirectHandler>
-                <Suspense fallback={<PageLoader />}>
-                  <Routes>
-                    <Route path="/auth" element={<Auth />} />
-                    <Route
-                      path="/"
-                      element={
-                        <ProtectedRoute>
-                          <Index />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/approvals"
-                      element={
-                        <ProtectedRoute>
-                          <Approvals />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/users"
-                      element={
-                        <ProtectedRoute>
-                          <UserManagement />
-                        </ProtectedRoute>
-                      }
-                    />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </Suspense>
-              </TokenRedirectHandler>
-            </TourProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <BrowserRouter>
+            <AuthProvider>
+              <TourProvider>
+                <TourOverlay />
+                <TokenRedirectHandler>
+                  <Suspense fallback={<PageLoader />}>
+                    <Routes>
+                      <Route path="/auth" element={<Auth />} />
+                      <Route
+                        path="/"
+                        element={
+                          <ProtectedRoute>
+                            <Index />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/approvals"
+                        element={
+                          <ProtectedRoute>
+                            <Approvals />
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/users"
+                        element={
+                          <ProtectedRoute>
+                            <UserManagement />
+                          </ProtectedRoute>
+                        }
+                      />
+                      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </Suspense>
+                </TokenRedirectHandler>
+              </TourProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 

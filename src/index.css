@@ -118,6 +118,18 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    /* Smooth color transitions for theme changes */
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Smooth transitions for theme-aware elements */
+  * {
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  }
+
+  /* Improved focus visibility for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 
   /* Disable hover states on touch devices */
@@ -126,6 +138,17 @@
     a:hover,
     [role="button"]:hover {
       @apply hover:bg-transparent hover:text-foreground;
+    }
+  }
+
+  /* Reduced motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
   }
 }

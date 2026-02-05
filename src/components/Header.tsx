@@ -10,6 +10,7 @@ import { useApproverVouchers } from '@/hooks/useVouchers';
 import { usePrograms } from '@/hooks/usePrograms';
 import { ProfileSettingsDialog } from './ProfileSettingsDialog';
 import { TourHelpButton } from './TourOverlay';
+import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   trips: Trip[];
@@ -70,6 +71,7 @@ export const Header = memo(({ trips, totalMiles }: HeaderProps) => {
           )}
           {!isApprovalsPage && !isUsersPage && <ExportButton trips={trips} totalMiles={totalMiles} />}
           <TourHelpButton />
+          <ThemeToggle />
           <ProfileSettingsDialog />
           <Button variant="ghost" size="icon" onClick={signOut} title="Sign out">
             <LogOut className="h-5 w-5" />
