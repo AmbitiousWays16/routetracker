@@ -109,6 +109,17 @@ export const useVouchers = () => {
     if (!user) return false;
 
     try {
+      // Fetch user's profile to get their signature
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('signature_text, signature_type, full_name')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile for signature:', profileError);
+      }
+
       // Update voucher status
       const { error: updateError } = await supabase
         .from('mileage_vouchers')
@@ -121,6 +132,24 @@ export const useVouchers = () => {
         .eq('user_id', user.id);
 
       if (updateError) throw updateError;
+
+      // Record employee submission in approval history with their signature
+      const { error: historyError } = await supabase
+        .from('approval_history')
+        .insert({
+          voucher_id: voucherId,
+          approver_id: user.id,
+          approver_role: 'user',
+          action: 'approve',
+          signature_text: profile?.signature_text || null,
+          approver_name: profile?.full_name || employeeName,
+          acted_date: new Date().toISOString().split('T')[0],
+        });
+
+      if (historyError) {
+        console.error('Error recording employee signature:', historyError);
+        // Don't fail the submission if history insert fails
+      }
 
       // Send email notification to supervisor
       const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
