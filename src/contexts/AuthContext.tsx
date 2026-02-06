@@ -59,7 +59,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Best-effort sign out that always clears the local session so the UI can redirect.
+    // Some preview sessions can end up with a stale server session ("Session not found").
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+
+      // If for any reason local sign out fails, force-clear any stored auth tokens.
+      if (error) {
+        const keys = Object.keys(localStorage).filter(
+          (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+        );
+        for (const k of keys) localStorage.removeItem(k);
+      }
+    } finally {
+      // Ensure state is cleared even if onAuthStateChange doesn't fire.
+      setSession(null);
+      setUser(null);
+      setLoading(false);
+    }
   };
 
   return (
