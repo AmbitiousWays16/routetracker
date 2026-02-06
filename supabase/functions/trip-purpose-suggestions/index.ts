@@ -86,6 +86,8 @@ Common Travel Activities by Role:
 - Medical Staff: Patient screenings, medication monitoring, healthcare coordination
 - Residential Staff: Facility inspections, resident transport, shift coverage at locations
 - Administrative: Coordination meetings, grant reporting, interagency collaboration
+- IT Support/Information Technology: Hardware installation, computer repairs, network troubleshooting, software deployment, printer maintenance, workstation setup, server room visits, equipment delivery, tech support calls, system upgrades, security audits, data backup operations
+- Help Desk/Technical Support: On-site technical assistance, equipment configuration, user training, peripheral installation, connectivity troubleshooting
 `;
 
 serve(async (req) => {
@@ -224,12 +226,41 @@ serve(async (req) => {
       });
     }
 
+    // Fetch user's recent trip purposes from the last 60 days for personalized suggestions
+    let recentPurposes: string[] = [];
+    try {
+      const sixtyDaysAgo = new Date();
+      sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+      
+      const { data: recentTrips } = await supabase
+        .from('trips')
+        .select('purpose')
+        .eq('user_id', user.id)
+        .gte('date', sixtyDaysAgo.toISOString().split('T')[0])
+        .not('purpose', 'eq', '')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (recentTrips && recentTrips.length > 0) {
+        // Get unique purposes
+        recentPurposes = [...new Set(recentTrips.map(t => t.purpose).filter(Boolean))].slice(0, 5);
+        console.log('Found recent purposes:', recentPurposes.length);
+      }
+    } catch (err) {
+      console.warn('Could not fetch recent purposes:', err);
+      // Continue without recent purposes
+    }
+
     // Create prompt for trip purpose suggestions
     const roleContext = sanitizedJobTitle 
-      ? `\nThe staff member's role is: ${sanitizedJobTitle}. Tailor suggestions to activities typical for this role.`
+      ? `\nThe staff member's role is: ${sanitizedJobTitle}. Tailor suggestions specifically to activities typical for this role.`
       : '';
 
-    const prompt = `Given a business trip from "${sanitizedFrom}" to "${sanitizedTo}"${sanitizedProgram ? ` for the "${sanitizedProgram}" program` : ''}${roleContext}
+    const recentPurposesContext = recentPurposes.length > 0
+      ? `\n\nThe user has previously used these business purposes (use as reference for similar suggestions):\n${recentPurposes.map(p => `- "${p}"`).join('\n')}`
+      : '';
+
+    const prompt = `Given a business trip from "${sanitizedFrom}" to "${sanitizedTo}"${sanitizedProgram ? ` for the "${sanitizedProgram}" program` : ''}${roleContext}${recentPurposesContext}
 
 ${ORGANIZATIONAL_CONTEXT}
 
@@ -239,7 +270,9 @@ Requirements:
 - Professional and specific
 - 5-15 words long
 - Relevant to the organization's mission and the staff member's role
-- Related to typical WestCare activities (client services, site visits, training, outreach, etc.)
+- If the role is IT Support, Help Desk, or Information Technology, focus on technical activities like: hardware repairs, software installation, network troubleshooting, workstation setup, equipment delivery, server maintenance, printer repairs, tech support visits
+- If recent purposes are provided, use them as examples of the user's typical activities and generate similar suggestions
+- Related to typical WestCare activities
 
 Return ONLY a JSON array of 5 strings, no other text. Example format:
 ["Client home visit for case management follow-up", "Site inspection for program compliance review", "Training session delivery for staff development", "Community outreach event for prevention program", "Court appearance for client advocacy support"]`;
