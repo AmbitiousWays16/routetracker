@@ -104,6 +104,8 @@ export type Database = {
           full_name: string | null
           id: string
           job_title: string | null
+          signature_text: string | null
+          signature_type: string | null
           updated_at: string
           user_id: string
         }
@@ -113,6 +115,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           job_title?: string | null
+          signature_text?: string | null
+          signature_type?: string | null
           updated_at?: string
           user_id: string
         }
@@ -122,6 +126,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           job_title?: string | null
+          signature_text?: string | null
+          signature_type?: string | null
           updated_at?: string
           user_id?: string
         }

@@ -55,21 +55,25 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
     setIsExporting(true);
     
     try {
-      // Fetch user's profile to get full name and job title
+      // Fetch user's profile to get full name, job title, and signature
       let employeeName = '';
       let employeeJobTitle = '';
+      let employeeSignatureType: 'typed' | 'drawn' | null = null;
+      let employeeSignatureText: string | null = null;
       let userId = '';
       const { data: sessionData } = await supabase.auth.getSession();
       if (sessionData.session?.user) {
         userId = sessionData.session.user.id;
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name, job_title, email')
+          .select('full_name, job_title, email, signature_type, signature_text')
           .eq('user_id', sessionData.session.user.id)
           .maybeSingle();
         
         employeeName = profileData?.full_name || profileData?.email || sessionData.session.user.email || '';
         employeeJobTitle = profileData?.job_title || '';
+        employeeSignatureType = (profileData?.signature_type as 'typed' | 'drawn' | null) || null;
+        employeeSignatureText = profileData?.signature_text || null;
       }
 
       // Sort trips by date first so we can derive the export month from the
@@ -511,10 +515,30 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             <div class="signature-grid">
               <div class="signature-box">
                 <div class="title">Employee${employeeName ? `: ${escapeHtml(employeeName)}` : ''}</div>
-                <div class="signature-line">
-                  <span>Signature</span>
-                  <span>Date</span>
-                </div>
+                ${(() => {
+                  // Render employee signature if available
+                  if (employeeSignatureType === 'drawn' && employeeSignatureText?.startsWith('data:image')) {
+                    return `
+                      <div class="signature-display">
+                        <img src="${employeeSignatureText}" alt="Employee Signature" class="drawn-signature" />
+                        <span class="signature-date">${format(new Date(), 'MM/dd/yyyy')}</span>
+                      </div>
+                    `;
+                  } else if (employeeSignatureType === 'typed' && employeeSignatureText) {
+                    return `
+                      <div class="signature-display">
+                        <span class="cursive-signature">${escapeHtml(employeeSignatureText)}</span>
+                        <span class="signature-date">${format(new Date(), 'MM/dd/yyyy')}</span>
+                      </div>
+                    `;
+                  }
+                  return `
+                    <div class="signature-line">
+                      <span>Signature</span>
+                      <span>Date</span>
+                    </div>
+                  `;
+                })()}
               </div>
               ${(() => {
                 const supervisorSig = getSignatureForRole('supervisor');
