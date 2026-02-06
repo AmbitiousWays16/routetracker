@@ -201,7 +201,15 @@ export default function Approvals() {
     }
   };
 
-  const needsNextApprover = approverRole && getNextApproverRole(getStatusAfterApproval(approverRole));
+  // Determine the next approver role based on current approver's position in the chain
+  // supervisor → vp, vp → coo, coo → null (final)
+  const getNextRoleInChain = (role: typeof approverRole): 'vp' | 'coo' | null => {
+    if (role === 'supervisor') return 'vp';
+    if (role === 'vp') return 'coo';
+    return null; // COO is final
+  };
+  
+  const needsNextApprover = approverRole ? getNextRoleInChain(approverRole) : null;
   const isFinalApprover = approverRole === 'coo';
 
   return (
