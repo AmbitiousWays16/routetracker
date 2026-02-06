@@ -1,7 +1,7 @@
 import { memo, useMemo } from 'react';
 import { Trip } from '@/types/mileage';
 import { Card, CardContent } from '@/components/ui/card';
-import { Gauge, Calendar, DollarSign, Route } from 'lucide-react';
+import { CarFront, Calendar, DollarSign, Route } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface MileageSummaryProps {
@@ -22,7 +22,7 @@ export const MileageSummary = memo(({ trips, totalMiles }: MileageSummaryProps) 
         label: 'Total Miles',
         value: totalMiles.toFixed(1),
         suffix: 'mi',
-        icon: Gauge,
+        icon: CarFront,
         color: 'text-primary',
         bgColor: 'bg-primary/10',
       },
