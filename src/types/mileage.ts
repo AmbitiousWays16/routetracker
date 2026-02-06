@@ -30,39 +30,3 @@ export interface MileageVoucher {
   totalMiles: number;
   submittedDate?: Date;
 }
-
-// GPS Tracking Types
-export interface GPSCoordinate {
-  latitude: number;
-  longitude: number;
-  altitude?: number;
-  accuracy?: number;
-  heading?: number;
-  speed?: number; // meters per second
-  timestamp: number;
-}
-
-export interface GPSTrackingState {
-  isTracking: boolean;
-  isPaused: boolean;
-  coordinates: GPSCoordinate[];
-  totalDistance: number; // meters
-  totalDistanceMiles: number;
-  currentSpeed: number; // m/s
-  averageSpeed: number; // m/s
-  startTime?: number;
-  duration: number; // seconds
-  error?: string;
-}
-
-export interface RouteData {
-  routeId?: string;
-  coordinates: GPSCoordinate[];
-  totalDistanceMeters: number;
-  totalDistanceMiles: number;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  startAddress?: string;
-  endAddress?: string;
-}
