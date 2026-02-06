@@ -122,6 +122,7 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
       const renderSignature = (sig: ApprovalSignature | undefined): string => {
         if (!sig?.signature_text) {
           return `
+            <div class="signature-content"></div>
             <div class="signature-line">
               <span>Signature</span>
               <span>Date</span>
@@ -136,18 +137,26 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
         // Check if it's a base64 image (drawn signature)
         if (sig.signature_text.startsWith('data:image')) {
           return `
-            <div class="signature-display">
+            <div class="signature-content">
               <img src="${sig.signature_text}" alt="Signature" class="drawn-signature" />
               <span class="signature-date">${dateStr}</span>
+            </div>
+            <div class="signature-line">
+              <span>Signature</span>
+              <span>Date</span>
             </div>
           `;
         }
 
         // Otherwise it's typed text
         return `
-          <div class="signature-display">
+          <div class="signature-content">
             <span class="cursive-signature">${escapeHtml(sig.signature_text)}</span>
             <span class="signature-date">${dateStr}</span>
+          </div>
+          <div class="signature-line">
+            <span>Signature</span>
+            <span>Date</span>
           </div>
         `;
       };
@@ -356,6 +365,14 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
               margin-bottom: 40px;
             }
             
+            .signature-content {
+              min-height: 50px;
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-end;
+              padding-bottom: 8px;
+            }
+            
             .signature-line {
               border-top: 1px solid #1a1a2e;
               padding-top: 8px;
@@ -366,14 +383,6 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
             .signature-line span {
               font-size: 11px;
               color: #64748b;
-            }
-            
-            .signature-display {
-              border-top: 1px solid #1a1a2e;
-              padding-top: 8px;
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
             }
             
             .cursive-signature {
@@ -519,20 +528,29 @@ export const ExportButton = ({ trips, totalMiles }: ExportButtonProps) => {
                   // Render employee signature if available
                   if (employeeSignatureType === 'drawn' && employeeSignatureText?.startsWith('data:image')) {
                     return `
-                      <div class="signature-display">
+                      <div class="signature-content">
                         <img src="${employeeSignatureText}" alt="Employee Signature" class="drawn-signature" />
                         <span class="signature-date">${format(new Date(), 'MM/dd/yyyy')}</span>
+                      </div>
+                      <div class="signature-line">
+                        <span>Signature</span>
+                        <span>Date</span>
                       </div>
                     `;
                   } else if (employeeSignatureType === 'typed' && employeeSignatureText) {
                     return `
-                      <div class="signature-display">
+                      <div class="signature-content">
                         <span class="cursive-signature">${escapeHtml(employeeSignatureText)}</span>
                         <span class="signature-date">${format(new Date(), 'MM/dd/yyyy')}</span>
+                      </div>
+                      <div class="signature-line">
+                        <span>Signature</span>
+                        <span>Date</span>
                       </div>
                     `;
                   }
                   return `
+                    <div class="signature-content"></div>
                     <div class="signature-line">
                       <span>Signature</span>
                       <span>Date</span>
