@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const allowedOrigins = [
   'https://dumhzvkifwhvdgswplew.supabase.co',
   'https://id-preview--2face1c8-df08-44c3-9a59-cc212f800657.lovable.app',
+  'https://2face1c8-df08-44c3-9a59-cc212f800657.lovableproject.com',
   'https://routetracker.lovable.app',
   'https://triptrackerapp.tech',
   'https://www.triptrackerapp.tech',

@@ -9,6 +9,8 @@ const allowedOrigins = [
   'https://www.triptrackerapp.tech',
   'http://localhost:5173',
   'http://localhost:8080',
+  'https://id-preview--2face1c8-df08-44c3-9a59-cc212f800657.lovable.app',
+  'https://2face1c8-df08-44c3-9a59-cc212f800657.lovableproject.com',
 ];
 
 // Strict origin matching - no wildcards for production security
