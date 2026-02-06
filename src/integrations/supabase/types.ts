@@ -249,7 +249,33 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_approver_view: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          job_title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          job_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          job_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       archive_old_routes: { Args: { months_old?: number }; Returns: number }
