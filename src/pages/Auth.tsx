@@ -41,6 +41,7 @@ const Auth = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSettingPassword, setIsSettingPassword] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
   const hasCheckedHash = useRef(false);
 
   // Check URL hash for invite/recovery tokens on initial load only
@@ -141,6 +142,35 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error('Please enter your email address');
+      return;
+    }
+
+    const emailValidation = z.string().email().safeParse(email);
+    if (!emailValidation.success) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Password reset email sent! Check your inbox.');
+        setIsForgotPassword(false);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -225,6 +255,64 @@ const Auth = () => {
     );
   }
 
+  // Show forgot password form
+  if (isForgotPassword) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md shadow-elevated animate-fade-in">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto">
+              <img 
+                src={westcareLogo} 
+                alt="WestCare California" 
+                className="mx-auto rounded-lg object-contain transition-transform hover:scale-105"
+                width={132}
+                height={128}
+                loading="eager"
+                fetchPriority="high"
+              />
+            </div>
+            <div className="space-y-2">
+              <CardTitle className="text-2xl sm:text-3xl font-bold">Reset Password</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
+                Enter your email and we'll send you a reset link.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-email" className="text-sm font-medium">Email</Label>
+              <Input
+                id="reset-email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="transition-all focus:ring-2"
+                autoComplete="email"
+              />
+            </div>
+            <Button
+              className="w-full mt-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              onClick={handleForgotPassword}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Send Reset Link
+            </Button>
+            <button
+              type="button"
+              onClick={() => setIsForgotPassword(false)}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              Back to Sign In
+            </button>
+          </CardContent>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-elevated animate-fade-in">
@@ -278,8 +366,17 @@ const Auth = () => {
                   autoComplete="current-password"
                 />
               </div>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotPassword(true)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <Button
-                className="w-full mt-6 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                className="w-full mt-4 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 onClick={() => handleAuth('signin')}
                 disabled={isSubmitting}
               >
