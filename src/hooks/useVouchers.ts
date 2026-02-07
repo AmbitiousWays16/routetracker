@@ -309,37 +309,18 @@ export const useApproverVouchers = () => {
     if (!user || !approverRole) return false;
 
     try {
-      const newStatus = getStatusAfterApproval(approverRole);
-      const nextRole = getNextApproverRole(newStatus);
-      const isFinalApproval = newStatus === 'approved';
+      const { data, error } = await supabase.functions.invoke('approve-voucher', {
+        body: {
+          voucherId: voucher.id,
+          signatureText: signatureText || null,
+          approverName: approverNameForSignature || null,
+        },
+      });
 
-      // Update voucher status
-      const updateData: { status: VoucherStatus; current_approver_id?: string | null } = { status: newStatus };
-      if (isFinalApproval) {
-        updateData.current_approver_id = null;
-      }
+      if (error) throw error;
 
-      const { error: updateError } = await supabase
-        .from('mileage_vouchers')
-        .update(updateData)
-        .eq('id', voucher.id);
-
-      if (updateError) throw updateError;
-
-      // Record approval in history with signature
-      const { error: historyError } = await supabase
-        .from('approval_history')
-        .insert({
-          voucher_id: voucher.id,
-          approver_id: user.id,
-          approver_role: approverRole,
-          action: 'approve',
-          signature_text: signatureText || null,
-          approver_name: approverNameForSignature || null,
-          acted_date: new Date().toISOString().split('T')[0],
-        });
-
-      if (historyError) throw historyError;
+      // Optional: if backend returned a status, we could use it; for now just refresh.
+      void data;
 
       // Email notifications for approvals are currently disabled
       // TODO: Re-enable when email infrastructure is ready
@@ -356,6 +337,7 @@ export const useApproverVouchers = () => {
       toast.error('Failed to approve voucher');
       return false;
     }
+
   }, [user, approverRole, fetchPendingVouchers]);
 
   const rejectVoucher = useCallback(async (
