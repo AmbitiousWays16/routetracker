@@ -341,51 +341,12 @@ export const useApproverVouchers = () => {
 
       if (historyError) throw historyError;
 
-      // Send notification email to next approver or employee
-      const notificationEmail = nextApproverEmail || employeeEmail;
-      const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
-
-      try {
-        const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
-          body: {
-            voucherId: voucher.id,
-            action: 'approve',
-            recipientEmail: notificationEmail,
-            employeeName,
-            month: monthDisplay,
-            totalMiles: voucher.total_miles,
-            nextApproverRole: nextRole,
-          },
-        });
-
-        if (emailError) {
-          console.error('Failed to send approval notification email:', emailError);
-        }
-      } catch (err) {
-        console.error('Failed to send approval notification email:', err);
-      }
-
-      // If final approval, also notify accountant
-      if (isFinalApproval && accountantEmail) {
-        try {
-          const { error: accountantNotifyError } = await supabase.functions.invoke('send-approval-email', {
-            body: {
-              voucherId: voucher.id,
-              action: 'final_approval',
-              recipientEmail: accountantEmail,
-              employeeName,
-              month: monthDisplay,
-              totalMiles: voucher.total_miles,
-            },
-          });
-
-          if (accountantNotifyError) {
-            console.error('Failed to send accountant notification email:', accountantNotifyError);
-          }
-        } catch (err) {
-          console.error('Failed to send accountant notification email:', err);
-        }
-      }
+      // Email notifications for approvals are currently disabled
+      // TODO: Re-enable when email infrastructure is ready
+      void nextApproverEmail; // suppress unused variable warning
+      void accountantEmail;
+      void employeeEmail;
+      void employeeName;
 
       toast.success('Voucher approved');
       await fetchPendingVouchers();
