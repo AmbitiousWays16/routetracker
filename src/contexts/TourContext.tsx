@@ -83,9 +83,8 @@ export function TourProvider({ children }: { children: ReactNode }) {
       const seen = localStorage.getItem(tourKey);
       setHasSeenTour(seen === 'true');
       
-      // Auto-start tour for returning users (not first-time login)
-      // First-time users won't see the tour automatically - they can start it manually
-      if (seen === 'true') {
+      // Auto-start tour only for first-time users (not returning users)
+      if (!seen) {
         const timer = setTimeout(() => {
           setIsActive(true);
         }, 1000);
