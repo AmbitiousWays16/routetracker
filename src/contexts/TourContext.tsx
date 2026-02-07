@@ -80,11 +80,23 @@ export function TourProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       const tourKey = `${TOUR_STORAGE_KEY}-${user.id}`;
-      const seen = localStorage.getItem(tourKey);
-      setHasSeenTour(seen === 'true');
-      
-      // Auto-start tour only for first-time users (not returning users)
-      if (!seen) {
+      const seenValue = localStorage.getItem(tourKey);
+      const hasSeen = seenValue === 'true';
+
+      setHasSeenTour(hasSeen);
+
+      // Auto-start tour only for truly first-time users.
+      // Important: mark as "seen" immediately when we auto-start so it won't
+      // keep popping up for returning users if they refresh/log out mid-tour.
+      if (!hasSeen) {
+        try {
+          localStorage.setItem(tourKey, 'true');
+        } catch {
+          // Ignore storage errors (e.g., privacy mode). In that case the tour may
+          // still re-appear on next login because we can't persist the flag.
+        }
+        setHasSeenTour(true);
+
         const timer = setTimeout(() => {
           setIsActive(true);
         }, 1000);
