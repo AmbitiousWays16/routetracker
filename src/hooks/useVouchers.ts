@@ -345,30 +345,46 @@ export const useApproverVouchers = () => {
       const notificationEmail = nextApproverEmail || employeeEmail;
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
 
-      await supabase.functions.invoke('send-approval-email', {
-        body: {
-          voucherId: voucher.id,
-          action: 'approve',
-          recipientEmail: notificationEmail,
-          employeeName,
-          month: monthDisplay,
-          totalMiles: voucher.total_miles,
-          nextApproverRole: nextRole,
-        },
-      });
-
-      // If final approval, also notify accountant
-      if (isFinalApproval && accountantEmail) {
-        await supabase.functions.invoke('send-approval-email', {
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
           body: {
             voucherId: voucher.id,
-            action: 'final_approval',
-            recipientEmail: accountantEmail,
+            action: 'approve',
+            recipientEmail: notificationEmail,
             employeeName,
             month: monthDisplay,
             totalMiles: voucher.total_miles,
+            nextApproverRole: nextRole,
           },
         });
+
+        if (emailError) {
+          console.error('Failed to send approval notification email:', emailError);
+        }
+      } catch (err) {
+        console.error('Failed to send approval notification email:', err);
+      }
+
+      // If final approval, also notify accountant
+      if (isFinalApproval && accountantEmail) {
+        try {
+          const { error: accountantNotifyError } = await supabase.functions.invoke('send-approval-email', {
+            body: {
+              voucherId: voucher.id,
+              action: 'final_approval',
+              recipientEmail: accountantEmail,
+              employeeName,
+              month: monthDisplay,
+              totalMiles: voucher.total_miles,
+            },
+          });
+
+          if (accountantNotifyError) {
+            console.error('Failed to send accountant notification email:', accountantNotifyError);
+          }
+        } catch (err) {
+          console.error('Failed to send accountant notification email:', err);
+        }
       }
 
       toast.success('Voucher approved');
@@ -417,17 +433,25 @@ export const useApproverVouchers = () => {
       // Send notification email to employee
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
 
-      await supabase.functions.invoke('send-approval-email', {
-        body: {
-          voucherId: voucher.id,
-          action: 'reject',
-          recipientEmail: employeeEmail,
-          employeeName,
-          month: monthDisplay,
-          totalMiles: voucher.total_miles,
-          rejectionReason: reason,
-        },
-      });
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
+          body: {
+            voucherId: voucher.id,
+            action: 'reject',
+            recipientEmail: employeeEmail,
+            employeeName,
+            month: monthDisplay,
+            totalMiles: voucher.total_miles,
+            rejectionReason: reason,
+          },
+        });
+
+        if (emailError) {
+          console.error('Failed to send rejection notification email:', emailError);
+        }
+      } catch (err) {
+        console.error('Failed to send rejection notification email:', err);
+      }
 
       toast.success('Voucher returned to employee');
       await fetchPendingVouchers();

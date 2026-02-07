@@ -95,30 +95,37 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const supabase = createClient(
+    const supabaseUser = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Service client used ONLY for server-side reads needed for authorization.
+    // This avoids RLS issues after approvers change voucher status (e.g., pending_supervisor -> pending_vp).
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { 
-        status: 401, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const { 
-      voucherId, 
-      action, 
-      recipientEmail, 
+    const {
+      voucherId,
+      action,
+      recipientEmail,
       recipientName,
-      employeeName, 
-      month, 
+      employeeName,
+      month,
       totalMiles,
       rejectionReason,
-      nextApproverRole
+      nextApproverRole,
     }: ApprovalEmailRequest = await req.json();
 
     // Validate required fields
@@ -130,8 +137,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // === AUTHORIZATION CHECK ===
-    // Verify that the authenticated user has permission to trigger emails for this voucher
-    const { data: voucher, error: voucherError } = await supabase
+    // Use service role to load voucher metadata (bypasses RLS).
+    // Caller is still authenticated via JWT (above) and must be owner or an approver.
+    const { data: voucher, error: voucherError } = await supabaseAdmin
       .from('mileage_vouchers')
       .select('user_id, status')
       .eq('id', voucherId)
@@ -147,13 +155,18 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if user is the voucher owner
     const isOwner = voucher.user_id === user.id;
 
-    // Check if user has an approver role
-    const { data: userRoles } = await supabase
+    // Check if user has an approver role (queried with user JWT)
+    const { data: userRoles, error: rolesError } = await supabaseUser
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
 
-    const hasApproverRole = userRoles?.some(r => 
+    if (rolesError) {
+      // Don't leak details to caller; log server-side for debugging.
+      console.error('Error fetching user roles for authorization:', rolesError);
+    }
+
+    const hasApproverRole = (userRoles || []).some((r) =>
       ['supervisor', 'vp', 'coo', 'admin'].includes(r.role)
     );
 
