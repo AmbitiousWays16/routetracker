@@ -33,9 +33,9 @@ export const useApprovers = () => {
       // Get unique user IDs
       const userIds = [...new Set(rolesData.map(r => r.user_id))];
 
-      // Fetch profiles for these users
+      // Fetch profiles from approver view (excludes sensitive signature fields)
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
+        .from('profiles_approver_view')
         .select('user_id, email, full_name')
         .in('user_id', userIds);
 
