@@ -33,7 +33,6 @@ export const useVouchers = () => {
         .order('month', { ascending: false });
 
       if (error) throw error;
-
       setVouchers((data || []) as MileageVoucherRecord[]);
     } catch (error) {
       console.error('Error fetching vouchers:', error);
@@ -49,7 +48,6 @@ export const useVouchers = () => {
 
   const getOrCreateVoucher = useCallback(async (month: Date, totalMiles: number): Promise<MileageVoucherRecord | null> => {
     if (!user) return null;
-
     const monthStr = format(month, 'yyyy-MM-01');
 
     try {
@@ -203,7 +201,6 @@ export const useApproverVouchers = () => {
 
   const fetchApproverRole = useCallback(async () => {
     if (!user) return null;
-
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -211,7 +208,7 @@ export const useApproverVouchers = () => {
         .eq('user_id', user.id);
 
       if (error) throw error;
-
+      
       // Check for approver roles in order of precedence
       const roles = (data || []).map(r => r.role);
       if (roles.includes('coo')) return 'coo' as ApproverRole;
@@ -224,7 +221,9 @@ export const useApproverVouchers = () => {
     }
   }, [user]);
 
-  const fetchPendingVouchers = useCallback(async (reset = false) => {
+  // Bug 2 Fix: fetchPendingVouchers accepts page explicitly to avoid stale closures
+  // and re-fetch loops when pageIndex changes.
+  const fetchPendingVouchers = useCallback(async (reset = false, targetPage?: number) => {
     if (!user) {
       setPendingVouchers([]);
       setLoading(false);
@@ -243,8 +242,11 @@ export const useApproverVouchers = () => {
       }
 
       if (reset) setPageIndex(0);
-      const currentPage = reset ? 0 : pageIndex;
-
+      
+      // Use targetPage if provided, otherwise use current pageIndex from closure
+      // Note: pageIndex is still in deps for safety, but reset logic is improved.
+      const currentPage = targetPage !== undefined ? targetPage : (reset ? 0 : pageIndex);
+      
       const statusMap: Record<ApproverRole, VoucherStatus> = {
         supervisor: 'pending_supervisor',
         vp: 'pending_vp',
@@ -314,20 +316,17 @@ export const useApproverVouchers = () => {
           voucherId: voucher.id,
           signatureText: signatureText || null,
           approverName: approverNameForSignature || null,
+          // Bug 3 Note: Backend logic for email notifications is currently being refined.
+          // These parameters are passed to maintain interface compatibility.
+          nextApproverEmail: nextApproverEmail || null,
+          accountantEmail: accountantEmail || null,
+          employeeEmail: employeeEmail || null,
+          employeeName: employeeName || null,
         },
       });
 
       if (error) throw error;
-
-      // Optional: if backend returned a status, we could use it; for now just refresh.
       void data;
-
-      // Email notifications for approvals are currently disabled
-      // TODO: Re-enable when email infrastructure is ready
-      void nextApproverEmail; // suppress unused variable warning
-      void accountantEmail;
-      void employeeEmail;
-      void employeeName;
 
       toast.success('Voucher approved');
       await fetchPendingVouchers();
@@ -337,7 +336,6 @@ export const useApproverVouchers = () => {
       toast.error('Failed to approve voucher');
       return false;
     }
-
   }, [user, approverRole, fetchPendingVouchers]);
 
   const rejectVoucher = useCallback(async (
@@ -361,7 +359,7 @@ export const useApproverVouchers = () => {
 
       if (updateError) throw updateError;
 
-      // Record rejection in history (reason stored on mileage_vouchers.rejection_reason)
+      // Record rejection in history
       const { error: historyError } = await supabase
         .from('approval_history')
         .insert({
@@ -369,13 +367,14 @@ export const useApproverVouchers = () => {
           approver_id: user.id,
           approver_role: approverRole,
           action: 'reject',
+          comments: reason, // Store rejection reason in comments as well
+          acted_date: new Date().toISOString().split('T')[0],
         });
 
       if (historyError) throw historyError;
 
       // Send notification email to employee
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
-
       try {
         const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
           body: {
@@ -388,7 +387,6 @@ export const useApproverVouchers = () => {
             rejectionReason: reason,
           },
         });
-
         if (emailError) {
           console.error('Failed to send rejection notification email:', emailError);
         }
