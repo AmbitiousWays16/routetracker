@@ -96,6 +96,7 @@ export default function Approvals() {
 
   const fetchVoucherTrips = async (voucher: MileageVoucherRecord) => {
     setLoadingTrips(true);
+    setVoucherTrips([]); // Bug 5 Fix: Reset stale data immediately
     try {
       const monthStart = format(new Date(voucher.month), 'yyyy-MM-01');
       const monthEnd = format(new Date(new Date(voucher.month).getFullYear(), new Date(voucher.month).getMonth() + 1, 0), 'yyyy-MM-dd');
@@ -107,7 +108,7 @@ export default function Approvals() {
         .gte('date', monthStart)
         .lte('date', monthEnd)
         .order('date', { ascending: true });
-        
+      
       if (error) throw error;
       setVoucherTrips(data || []);
     } catch (error) {
@@ -124,8 +125,8 @@ export default function Approvals() {
     setEmployeeEmail(data.email);
     setEmployeeName(data.name);
     
-    // Fetch trips for review
-    fetchVoucherTrips(voucher);
+    // Bug 5 Fix: Await the trips fetch before opening dialog to ensure no stale flash
+    await fetchVoucherTrips(voucher);
     
     setNextApproverEmail('');
     setAccountantEmail('');
@@ -193,6 +194,7 @@ export default function Approvals() {
 
     const signatureValue = signatureMode === 'draw' ? signatureImage : signatureText.trim();
     setProcessing(true);
+
     try {
       await approveVoucher(
         selectedVoucher,
@@ -328,7 +330,6 @@ export default function Approvals() {
           </DialogHeader>
           
           <div className=\"flex-1 overflow-y-auto space-y-6 py-4 px-1\">
-            {/* Trip Details Section (Bug 6 Fix) */}
             <div className=\"space-y-4\">
               <h3 className=\"text-sm font-semibold uppercase tracking-wider text-muted-foreground\">Trip Details</h3>
               {loadingTrips ? (
@@ -365,9 +366,7 @@ export default function Approvals() {
                 </div>
               )}
             </div>
-
             <hr />
-
             <div className=\"space-y-4\">
               <div className=\"grid sm:grid-cols-2 gap-4\">
                 <div className=\"space-y-2\">
@@ -379,7 +378,6 @@ export default function Approvals() {
                   <Input id=\"employee-email\" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
                 </div>
               </div>
-
               <div className=\"space-y-2\">
                 <Label>Signature *</Label>
                 <Tabs value={signatureMode} onValueChange={(v) => setSignatureMode(v as 'type' | 'draw')}>
@@ -402,7 +400,6 @@ export default function Approvals() {
                 </Tabs>
                 {signatureError && <p className=\"text-sm text-destructive\">{signatureError}</p>}
               </div>
-
               {needsNextApprover && (
                 <ApproverSelect
                   label={`Next Approver (${getRoleDisplayName(needsNextApprover)})`}
@@ -416,7 +413,6 @@ export default function Approvals() {
               )}
             </div>
           </div>
-
           <DialogFooter className=\"pt-4 border-t\">
             <Button variant=\"outline\" onClick={() => setShowApproveDialog(false)}>Cancel</Button>
             <Button onClick={handleApprove} disabled={processing}>
