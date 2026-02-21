@@ -27,7 +27,7 @@ export const useUserAddresses = () => {
     try {
       const { data, error } = await supabase
         .from('user_addresses')
-        .select('*')
+        .select('id, user_id, name, address, created_at, updated_at')
         .eq('user_id', user.id)
         .order('name');
 

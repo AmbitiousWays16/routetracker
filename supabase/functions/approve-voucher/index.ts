@@ -92,10 +92,12 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const body: ApproveVoucherRequest = await req.json();
     const voucherId = body?.voucherId;
-    if (!voucherId) {
-      return new Response(JSON.stringify({ error: 'Missing voucherId' }), {
+    if (!voucherId || !UUID_REGEX.test(voucherId)) {
+      return new Response(JSON.stringify({ error: 'Invalid or missing voucherId' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
