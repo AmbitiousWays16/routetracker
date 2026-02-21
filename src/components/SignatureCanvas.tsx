@@ -48,11 +48,9 @@ export const SignatureCanvas = ({
   const getCoordinates = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
-
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-
     if ('touches' in e) {
       const touch = e.touches[0];
       return {
@@ -71,7 +69,6 @@ export const SignatureCanvas = ({
     e.preventDefault();
     const coords = getCoordinates(e);
     if (!coords) return;
-
     saveToHistory();
     setIsDrawing(true);
     lastPointRef.current = coords;
@@ -90,12 +87,10 @@ export const SignatureCanvas = ({
     const coords = getCoordinates(e);
     const ctx = getContext();
     if (!coords || !ctx || !lastPointRef.current) return;
-
     ctx.beginPath();
     ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
     ctx.lineTo(coords.x, coords.y);
     ctx.stroke();
-
     lastPointRef.current = coords;
     setHasSignature(true);
   }, [isDrawing, getCoordinates, getContext]);
@@ -104,21 +99,28 @@ export const SignatureCanvas = ({
     if (isDrawing) {
       setIsDrawing(false);
       lastPointRef.current = null;
-      
-      // Export signature
+
+      // Fix: read canvas pixels directly instead of relying on stale hasSignature state
       const canvas = canvasRef.current;
-      if (canvas && hasSignature) {
-        const dataUrl = canvas.toDataURL('image/png');
-        onSignatureChange(dataUrl);
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const isEmpty = !imageData.data.some((val, i) => i % 4 === 3 && val !== 0);
+          if (!isEmpty) {
+            const dataUrl = canvas.toDataURL('image/png');
+            onSignatureChange(dataUrl);
+            setHasSignature(true);
+          }
+        }
       }
     }
-  }, [isDrawing, hasSignature, onSignatureChange]);
+  }, [isDrawing, onSignatureChange]);
 
   const clearCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = getContext();
     if (!canvas || !ctx) return;
-
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setHasSignature(false);
     historyRef.current = [];
@@ -129,7 +131,6 @@ export const SignatureCanvas = ({
     const canvas = canvasRef.current;
     const ctx = getContext();
     if (!canvas || !ctx || historyRef.current.length === 0) return;
-
     const previousState = historyRef.current.pop();
     if (previousState) {
       ctx.putImageData(previousState, 0, 0);
@@ -168,13 +169,11 @@ export const SignatureCanvas = ({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const preventScroll = (e: TouchEvent) => {
       if (isDrawing) {
         e.preventDefault();
       }
     };
-
     canvas.addEventListener('touchmove', preventScroll, { passive: false });
     return () => {
       canvas.removeEventListener('touchmove', preventScroll);
