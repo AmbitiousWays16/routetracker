@@ -8,7 +8,7 @@ export type VoucherStatus =
 
 export type ApprovalAction = 'approve' | 'reject';
 
-export type ApproverRole = 'supervisor' | 'vp' | 'coo';
+export type ApproverRole = 'supervisor' | 'vp' | 'coo' | 'user';
 
 export interface MileageVoucherRecord {
   id: string;
@@ -30,7 +30,9 @@ export interface ApprovalHistoryRecord {
   approver_role: ApproverRole;
   action: ApprovalAction;
   comments: string | null;
-  acted_at: string;
+  signature_text: string | null;
+  approver_name: string | null;
+  acted_date: string;
 }
 
 export interface VoucherWithDetails extends MileageVoucherRecord {
@@ -77,10 +79,11 @@ export const getStatusDisplayName = (status: VoucherStatus): string => {
 };
 
 export const getRoleDisplayName = (role: ApproverRole): string => {
-  const displayNames: Record<ApproverRole, string> = {
+  const displayNames: Record<string, string> = {
     supervisor: 'Supervisor',
     vp: 'Vice President',
     coo: 'Chief Operations Officer',
+    user: 'Employee',
   };
-  return displayNames[role];
+  return displayNames[role] || role;
 };
