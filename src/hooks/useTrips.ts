@@ -33,22 +33,21 @@ export const useTrips = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  // Bug 1 Fix: fetchTrips only depends on `user`, not `selectedMonth`.
-  // selectedMonth is always passed explicitly as an argument to avoid
-  // creating a new callback reference (and triggering a second useEffect
-  // re-run) every time the selected month changes.
+  // Bug 1 Fix: fetchTrips stable callback
   const fetchTrips = useCallback(async (monthDate: Date) => {
     if (!user) {
       setTrips([]);
       setLoading(false);
       return;
     }
+
     try {
       markStart('fetchTrips');
       setLoading(true);
-      // Get month boundaries for the selected month
+      
       const monthStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
+
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -56,9 +55,10 @@ export const useTrips = () => {
         .gte('date', monthStart)
         .lte('date', monthEnd)
         .order('date', { ascending: true });
+
       if (error) throw error;
+
       const formattedTrips: Trip[] = (data || []).map((trip) => {
-        // Parse routeMapData from static_map_url if it's stored as JSON
         let routeMapData: RouteMapData | undefined;
         if (trip.static_map_url) {
           try {
@@ -67,7 +67,7 @@ export const useTrips = () => {
               routeMapData = parsed;
             }
           } catch {
-            // Not JSON - this is a legacy URL, ignore it
+            // Not JSON
           }
         }
         return {
@@ -83,6 +83,7 @@ export const useTrips = () => {
           createdAt: new Date(trip.created_at),
         };
       });
+
       setTrips(formattedTrips);
       markEnd('fetchTrips');
     } catch (error) {
@@ -93,9 +94,6 @@ export const useTrips = () => {
     }
   }, [user]);
 
-  // Bug 1 Fix: useEffect depends on selectedMonth and user directly.
-  // fetchTrips is stable (only recreated when user changes), so this
-  // effect fires exactly once per [selectedMonth, user] change — no double fetch.
   useEffect(() => {
     fetchTrips(selectedMonth);
   }, [selectedMonth, user, fetchTrips]);
@@ -112,11 +110,10 @@ export const useTrips = () => {
       toast.error('You must be logged in to add trips');
       return null;
     }
+
     try {
-      // Store routeMapData as JSON string in static_map_url field (repurposed)
-      const staticMapUrlValue = trip.routeMapData
-        ? JSON.stringify(trip.routeMapData)
-        : null;
+      const staticMapUrlValue = trip.routeMapData ? JSON.stringify(trip.routeMapData) : null;
+      
       const { data, error } = await supabase
         .from('trips')
         .insert({
@@ -132,19 +129,9 @@ export const useTrips = () => {
         })
         .select()
         .single();
+
       if (error) throw error;
-      // Parse routeMapData from the stored JSON
-      let routeMapData: RouteMapData | undefined;
-      if (data.static_map_url) {
-        try {
-          const parsed = JSON.parse(data.static_map_url);
-          if (parsed.encodedPolyline) {
-            routeMapData = parsed;
-          }
-        } catch {
-          // Not JSON - ignore
-        }
-      }
+
       const newTrip: Trip = {
         id: data.id,
         date: data.date,
@@ -154,10 +141,10 @@ export const useTrips = () => {
         businessPurpose: data.purpose,
         miles: Number(data.miles),
         routeUrl: data.route_url || undefined,
-        routeMapData,
+        routeMapData: trip.routeMapData,
         createdAt: new Date(data.created_at),
       };
-      // Only add to local state if viewing editable month
+
       if (canEdit) {
         setTrips((prev) => [newTrip, ...prev]);
       }
@@ -177,6 +164,7 @@ export const useTrips = () => {
         .delete()
         .eq('id', id)
         .eq('user_id', user.id);
+
       if (error) throw error;
       setTrips((prev) => prev.filter((t) => t.id !== id));
     } catch (error) {
@@ -188,7 +176,7 @@ export const useTrips = () => {
   const updateTrip = useCallback(async (id: string, updates: Partial<Trip>) => {
     if (!user) return;
     try {
-      const dbUpdates: Record<string, unknown> = {};
+      const dbUpdates: Record<string, any> = {};
       if (updates.date !== undefined) dbUpdates.date = updates.date;
       if (updates.fromAddress !== undefined) dbUpdates.from_address = updates.fromAddress;
       if (updates.toAddress !== undefined) dbUpdates.to_address = updates.toAddress;
@@ -197,19 +185,17 @@ export const useTrips = () => {
       if (updates.miles !== undefined) dbUpdates.miles = updates.miles;
       if (updates.routeUrl !== undefined) dbUpdates.route_url = updates.routeUrl;
       if (updates.routeMapData !== undefined) {
-        dbUpdates.static_map_url = updates.routeMapData
-          ? JSON.stringify(updates.routeMapData)
-          : null;
+        dbUpdates.static_map_url = updates.routeMapData ? JSON.stringify(updates.routeMapData) : null;
       }
+
       const { error } = await supabase
         .from('trips')
         .update(dbUpdates)
         .eq('id', id)
         .eq('user_id', user.id);
+
       if (error) throw error;
-      setTrips((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
-      );
+      setTrips((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
     } catch (error) {
       console.error('Error updating trip:', error);
       toast.error('Failed to update trip');
@@ -223,6 +209,7 @@ export const useTrips = () => {
         .from('trips')
         .delete()
         .eq('user_id', user.id);
+
       if (error) throw error;
       setTrips([]);
       toast.success('All trips cleared');
@@ -232,7 +219,8 @@ export const useTrips = () => {
     }
   }, [user]);
 
-  const totalMiles = trips.reduce((sum, t) => sum + t.miles, 0);
+  // Fix Bug 7: Precision in mileage calculation
+  const totalMiles = Math.round(trips.reduce((sum, t) => sum + Number(t.miles || 0), 0) * 10) / 10;
 
   return {
     trips,
