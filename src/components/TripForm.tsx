@@ -79,14 +79,13 @@ export const TripForm = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-
+  
   // Optional: structure for per-field error messages (inline UX)
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof z.infer<typeof tripFormSchema>, string>>>({});
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
     const selectedProgram = programs.find((p) => p.name === programName);
-
     // Only auto-fill destination if it is currently empty
     if (!toAddress && selectedProgram?.address) {
       setToAddress(selectedProgram.address);
@@ -448,7 +447,11 @@ export const TripForm = ({
             <Switch id="round-trip" checked={isRoundTrip} onCheckedChange={setIsRoundTrip} disabled={isSubmitting} />
           </div>
 
-          <Button type="submit" disabled={!isValid} className="w-full gradient-primary">
+          <Button 
+            type="submit" 
+            disabled={!isValid} 
+            className={`w-full gradient-primary ${!isValid ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
+          >
             {isSubmitting ? "Saving..." : "Add Trip"}
           </Button>
         </form>
