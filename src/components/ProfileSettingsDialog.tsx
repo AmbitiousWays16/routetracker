@@ -72,7 +72,6 @@ export const ProfileSettingsDialog = () => {
         } else if (data.signature_type === 'drawn') {
           setSignatureType('drawn');
           setTypedSignature('');
-          // Bug Fix: Keep drawnSignature null to show the preview of existing signature
           setDrawnSignature(null);
           setExistingDrawnSignature(data.signature_text);
         } else {
@@ -124,7 +123,6 @@ export const ProfileSettingsDialog = () => {
     
     setSaving(true);
     try {
-      // Bug Fix: Use upsert instead of update to handle new profiles, and include user_id
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -164,11 +162,11 @@ export const ProfileSettingsDialog = () => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button data-tour=\"profile-settings\" variant=\"ghost\" size=\"icon\" title=\"Profile settings\">
-          <User className=\"h-5 w-5\" />
+        <Button data-tour="profile-settings" variant="ghost" size="icon" title="Profile settings">
+          <User className="h-5 w-5" />
         </Button>
       </DialogTrigger>
-      <DialogContent className=\"sm:max-w-[500px] max-h-[90vh] overflow-y-auto\">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Profile Settings</DialogTitle>
           <DialogDescription>
@@ -176,99 +174,99 @@ export const ProfileSettingsDialog = () => {
           </DialogDescription>
         </DialogHeader>
         {loading ? (
-          <div className=\"flex items-center justify-center py-8\">
-            <Loader2 className=\"h-6 w-6 animate-spin text-muted-foreground\" />
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className=\"grid gap-4 py-4\">
-            <div className=\"space-y-2\">
-              <Label htmlFor=\"email\">Email</Label>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
-                id=\"email\"
+                id="email"
                 value={user?.email || ''}
                 disabled
-                className=\"bg-muted\"
+                className="bg-muted"
               />
-              <p className=\"text-xs text-muted-foreground\">Email cannot be changed</p>
+              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
             </div>
-            <div className=\"space-y-2\">
-              <Label htmlFor=\"fullName\">Full Name</Label>
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
               <Input
-                id=\"fullName\"
-                placeholder=\"Enter your full name\"
+                id="fullName"
+                placeholder="Enter your full name"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 maxLength={100}
               />
-              <p className=\"text-xs text-muted-foreground\">
+              <p className="text-xs text-muted-foreground">
                 This name will appear on your mileage voucher
               </p>
             </div>
-            <div className=\"space-y-2\">
-              <Label htmlFor=\"jobTitle\">Job Title</Label>
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle">Job Title</Label>
               <Input
-                id=\"jobTitle\"
-                placeholder=\"Enter your job title\"
+                id="jobTitle"
+                placeholder="Enter your job title"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
                 maxLength={100}
               />
             </div>
-            <div className=\"space-y-3 pt-2 border-t\">
+            <div className="space-y-3 pt-2 border-t">
               <Label>Your Signature</Label>
-              <p className=\"text-xs text-muted-foreground\">
+              <p className="text-xs text-muted-foreground">
                 This signature will appear on vouchers you submit and exported PDFs.
               </p>
               
               <Tabs value={signatureType} onValueChange={(v) => setSignatureType(v as 'typed' | 'drawn')}>
-                <TabsList className=\"grid w-full grid-cols-2\">
-                  <TabsTrigger value=\"typed\" className=\"gap-2\">
-                    <Type className=\"h-4 w-4\" />
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="typed" className="gap-2">
+                    <Type className="h-4 w-4" />
                     Type Signature
                   </TabsTrigger>
-                  <TabsTrigger value=\"drawn\" className=\"gap-2\">
-                    <PenTool className=\"h-4 w-4\" />
+                  <TabsTrigger value="drawn" className="gap-2">
+                    <PenTool className="h-4 w-4" />
                     Draw Signature
                   </TabsTrigger>
                 </TabsList>
-                <TabsContent value=\"typed\" className=\"mt-3 space-y-3\">
+                <TabsContent value="typed" className="mt-3 space-y-3">
                   <Input
-                    placeholder=\"Type your signature\"
+                    placeholder="Type your signature"
                     value={typedSignature}
                     onChange={(e) => setTypedSignature(e.target.value)}
                     maxLength={100}
-                    className=\"font-signature text-xl\"
-                    style={{ fontFamily: \"'Dancing Script', cursive\" }}
+                    className="font-signature text-xl"
+                    style={{ fontFamily: "'Dancing Script', cursive" }}
                   />
                   {typedSignature && (
-                    <div className=\"p-4 border rounded-lg bg-muted/30\">
-                      <p className=\"text-xs text-muted-foreground mb-2\">Preview:</p>
+                    <div className="p-4 border rounded-lg bg-muted/30">
+                      <p className="text-xs text-muted-foreground mb-2">Preview:</p>
                       <p 
-                        className=\"text-2xl text-primary\"
-                        style={{ fontFamily: \"'Dancing Script', cursive\" }}
+                        className="text-2xl text-primary"
+                        style={{ fontFamily: "'Dancing Script', cursive" }}
                       >
                         {typedSignature}
                       </p>
                     </div>
                   )}
                 </TabsContent>
-                <TabsContent value=\"drawn\" className=\"mt-3 space-y-3\">
+                <TabsContent value="drawn" className="mt-3 space-y-3">
                   {existingDrawnSignature && !drawnSignature ? (
-                    <div className=\"space-y-3\">
-                      <div className=\"p-4 border rounded-lg bg-muted/30\">
-                        <p className=\"text-xs text-muted-foreground mb-2\">Current signature:</p>
+                    <div className="space-y-3">
+                      <div className="p-4 border rounded-lg bg-muted/30">
+                        <p className="text-xs text-muted-foreground mb-2">Current signature:</p>
                         <img 
                           src={existingDrawnSignature} 
-                          alt=\"Your signature\" 
-                          className=\"max-h-24 mx-auto\"
+                          alt="Your signature" 
+                          className="max-h-24 mx-auto"
                         />
                       </div>
                       <Button
-                        type=\"button\"
-                        variant=\"outline\"
-                        size=\"sm\"
+                        type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={handleClearDrawnSignature}
-                        className=\"w-full\"
+                        className="w-full"
                       >
                         Draw New Signature
                       </Button>
@@ -285,14 +283,14 @@ export const ProfileSettingsDialog = () => {
             </div>
           </div>
         )}
-        <div className=\"flex gap-2 pt-4 border-t\">
-          <Button variant=\"outline\" onClick={() => setOpen(false)} className=\"flex-1\">
+        <div className="flex gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={loading || saving} className=\"flex-1\">
+          <Button onClick={handleSave} disabled={loading || saving} className="flex-1">
             {saving ? (
               <>
-                <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Saving...
               </>
             ) : (
