@@ -1,13 +1,1 @@
-project_id = "dumhzvkifwhvdgswplew"
-
-[functions.google-maps-route]
-verify_jwt = false
-
-[functions.static-map-proxy]
-verify_jwt = false
-
-[functions.send-approval-email]
-verify_jwt = false
-
-[functions.trip-purpose-suggestions]
-verify_jwt = false
+project_id = "ubwmfvwsxnssbqfvkiif"
