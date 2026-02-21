@@ -11,7 +11,6 @@ import { markStart, markEnd } from '@/lib/performance';
 export const canEditMonth = (monthDate: Date): boolean => {
   const today = new Date();
   const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const selectedMonthStart = startOfMonth(monthDate);
 
   // Can always edit current month
   if (isSameMonth(monthDate, today)) {
@@ -33,7 +32,6 @@ export const useTrips = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  // Bug 1 Fix: fetchTrips stable callback
   const fetchTrips = useCallback(async (monthDate: Date) => {
     if (!user) {
       setTrips([]);
@@ -105,6 +103,7 @@ export const useTrips = () => {
   const isCurrentMonth = isSameMonth(selectedMonth, new Date());
   const canEdit = canEditMonth(selectedMonth);
 
+  // Bug 8 Fix: Fix stale closure by evaluating canEditMonth inside the callback
   const addTrip = useCallback(async (trip: Omit<Trip, 'id' | 'createdAt'>) => {
     if (!user) {
       toast.error('You must be logged in to add trips');
@@ -145,16 +144,18 @@ export const useTrips = () => {
         createdAt: new Date(data.created_at),
       };
 
-      if (canEdit) {
+      // Only add to state if it matches current selected month view
+      if (canEditMonth(selectedMonth)) {
         setTrips((prev) => [newTrip, ...prev]);
       }
+
       return newTrip;
     } catch (error) {
       console.error('Error adding trip:', error);
       toast.error('Failed to add trip');
       return null;
     }
-  }, [user, canEdit]);
+  }, [user, selectedMonth]); // Depend on selectedMonth, not closure canEdit
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
@@ -219,7 +220,6 @@ export const useTrips = () => {
     }
   }, [user]);
 
-  // Fix Bug 7: Precision in mileage calculation
   const totalMiles = Math.round(trips.reduce((sum, t) => sum + Number(t.miles || 0), 0) * 10) / 10;
 
   return {
