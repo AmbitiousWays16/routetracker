@@ -63,7 +63,11 @@ export const getStatusAfterApproval = (currentRole: ApproverRole): VoucherStatus
   if (currentRole === 'vp') {
     return 'pending_coo';
   }
-  return 'approved';
+  if (currentRole === 'coo') {
+    return 'approved';
+  }
+  // Bug 6 Fix: Handle 'user' role or any other fallback safely
+  return 'pending_supervisor';
 };
 
 export const getStatusDisplayName = (status: VoucherStatus): string => {
