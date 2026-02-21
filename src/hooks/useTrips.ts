@@ -12,18 +12,18 @@ export const canEditMonth = (monthDate: Date): boolean => {
   const today = new Date();
   const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const selectedMonthStart = startOfMonth(monthDate);
-  
+
   // Can always edit current month
   if (isSameMonth(monthDate, today)) {
     return true;
   }
-  
+
   // Can edit previous month only if today is before the 10th of current month
   const previousMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
   if (isSameMonth(monthDate, previousMonth) && getDate(today) < 10) {
     return true;
   }
-  
+
   return false;
 };
 
@@ -33,20 +33,22 @@ export const useTrips = () => {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
 
-  const fetchTrips = useCallback(async (monthDate: Date = selectedMonth) => {
+  // Bug 1 Fix: fetchTrips only depends on `user`, not `selectedMonth`.
+  // selectedMonth is always passed explicitly as an argument to avoid
+  // creating a new callback reference (and triggering a second useEffect
+  // re-run) every time the selected month changes.
+  const fetchTrips = useCallback(async (monthDate: Date) => {
     if (!user) {
       setTrips([]);
       setLoading(false);
       return;
     }
-
     try {
       markStart('fetchTrips');
       setLoading(true);
       // Get month boundaries for the selected month
       const monthStart = format(startOfMonth(monthDate), 'yyyy-MM-dd');
       const monthEnd = format(endOfMonth(monthDate), 'yyyy-MM-dd');
-
       const { data, error } = await supabase
         .from('trips')
         .select('*')
@@ -54,9 +56,7 @@ export const useTrips = () => {
         .gte('date', monthStart)
         .lte('date', monthEnd)
         .order('date', { ascending: true });
-
       if (error) throw error;
-
       const formattedTrips: Trip[] = (data || []).map((trip) => {
         // Parse routeMapData from static_map_url if it's stored as JSON
         let routeMapData: RouteMapData | undefined;
@@ -70,7 +70,6 @@ export const useTrips = () => {
             // Not JSON - this is a legacy URL, ignore it
           }
         }
-
         return {
           id: trip.id,
           date: trip.date,
@@ -84,7 +83,6 @@ export const useTrips = () => {
           createdAt: new Date(trip.created_at),
         };
       });
-
       setTrips(formattedTrips);
       markEnd('fetchTrips');
     } catch (error) {
@@ -93,11 +91,14 @@ export const useTrips = () => {
     } finally {
       setLoading(false);
     }
-  }, [user, selectedMonth]);
+  }, [user]);
 
+  // Bug 1 Fix: useEffect depends on selectedMonth and user directly.
+  // fetchTrips is stable (only recreated when user changes), so this
+  // effect fires exactly once per [selectedMonth, user] change — no double fetch.
   useEffect(() => {
     fetchTrips(selectedMonth);
-  }, [selectedMonth, user]);
+  }, [selectedMonth, user, fetchTrips]);
 
   const changeMonth = useCallback((newMonth: Date) => {
     setSelectedMonth(newMonth);
@@ -111,13 +112,11 @@ export const useTrips = () => {
       toast.error('You must be logged in to add trips');
       return null;
     }
-
     try {
       // Store routeMapData as JSON string in static_map_url field (repurposed)
-      const staticMapUrlValue = trip.routeMapData 
-        ? JSON.stringify(trip.routeMapData) 
+      const staticMapUrlValue = trip.routeMapData
+        ? JSON.stringify(trip.routeMapData)
         : null;
-
       const { data, error } = await supabase
         .from('trips')
         .insert({
@@ -133,9 +132,7 @@ export const useTrips = () => {
         })
         .select()
         .single();
-
       if (error) throw error;
-
       // Parse routeMapData from the stored JSON
       let routeMapData: RouteMapData | undefined;
       if (data.static_map_url) {
@@ -148,7 +145,6 @@ export const useTrips = () => {
           // Not JSON - ignore
         }
       }
-
       const newTrip: Trip = {
         id: data.id,
         date: data.date,
@@ -161,7 +157,6 @@ export const useTrips = () => {
         routeMapData,
         createdAt: new Date(data.created_at),
       };
-
       // Only add to local state if viewing editable month
       if (canEdit) {
         setTrips((prev) => [newTrip, ...prev]);
@@ -176,16 +171,13 @@ export const useTrips = () => {
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
-
     try {
       const { error } = await supabase
         .from('trips')
         .delete()
         .eq('id', id)
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       setTrips((prev) => prev.filter((t) => t.id !== id));
     } catch (error) {
       console.error('Error deleting trip:', error);
@@ -195,7 +187,6 @@ export const useTrips = () => {
 
   const updateTrip = useCallback(async (id: string, updates: Partial<Trip>) => {
     if (!user) return;
-
     try {
       const dbUpdates: Record<string, unknown> = {};
       if (updates.date !== undefined) dbUpdates.date = updates.date;
@@ -206,19 +197,16 @@ export const useTrips = () => {
       if (updates.miles !== undefined) dbUpdates.miles = updates.miles;
       if (updates.routeUrl !== undefined) dbUpdates.route_url = updates.routeUrl;
       if (updates.routeMapData !== undefined) {
-        dbUpdates.static_map_url = updates.routeMapData 
-          ? JSON.stringify(updates.routeMapData) 
+        dbUpdates.static_map_url = updates.routeMapData
+          ? JSON.stringify(updates.routeMapData)
           : null;
       }
-
       const { error } = await supabase
         .from('trips')
         .update(dbUpdates)
         .eq('id', id)
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       setTrips((prev) =>
         prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
       );
@@ -230,15 +218,12 @@ export const useTrips = () => {
 
   const clearTrips = useCallback(async () => {
     if (!user) return;
-
     try {
       const { error } = await supabase
         .from('trips')
         .delete()
         .eq('user_id', user.id);
-
       if (error) throw error;
-
       setTrips([]);
       toast.success('All trips cleared');
     } catch (error) {
