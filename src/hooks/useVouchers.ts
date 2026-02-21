@@ -29,7 +29,7 @@ export const useVouchers = () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('mileage_vouchers')
-        .select('*')
+        .select('id, user_id, month, total_miles, status, submitted_at, current_approver_id, rejection_reason, created_at, updated_at')
         .eq('user_id', user.id)
         .order('month', { ascending: false });
 
@@ -55,7 +55,7 @@ export const useVouchers = () => {
       // Check if voucher exists
       const { data: existing, error: fetchError } = await supabase
         .from('mileage_vouchers')
-        .select('*')
+        .select('id, user_id, month, total_miles, status, submitted_at, current_approver_id, rejection_reason, created_at, updated_at')
         .eq('user_id', user.id)
         .eq('month', monthStr)
         .maybeSingle();
@@ -249,7 +249,7 @@ export const useApproverVouchers = () => {
 
       const { data: vouchersData, error: vouchersError } = await supabase
         .from('mileage_vouchers')
-        .select('*')
+        .select('id, user_id, month, total_miles, status, submitted_at, current_approver_id, rejection_reason, created_at, updated_at')
         .eq('status', statusMap[role])
         .order('submitted_at', { ascending: true })
         .range(currentPage * pageSize, (currentPage + 1) * pageSize - 1);

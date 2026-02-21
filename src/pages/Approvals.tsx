@@ -102,7 +102,7 @@ export default function Approvals() {
       
       const { data, error } = await supabase
         .from('trips')
-        .select('*')
+        .select('id, user_id, date, from_address, to_address, program, purpose, miles, route_url, static_map_url, created_at, updated_at')
         .eq('user_id', voucher.user_id)
         .gte('date', monthStart)
         .lte('date', monthEnd)

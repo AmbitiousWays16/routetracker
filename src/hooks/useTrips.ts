@@ -48,7 +48,7 @@ export const useTrips = () => {
 
       const { data, error } = await supabase
         .from('trips')
-        .select('*')
+        .select('id, user_id, date, from_address, to_address, program, purpose, miles, route_url, static_map_url, created_at, updated_at')
         .eq('user_id', user.id)
         .gte('date', monthStart)
         .lte('date', monthEnd)

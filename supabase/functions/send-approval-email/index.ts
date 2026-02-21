@@ -116,6 +116,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
     const {
       voucherId,
       action,
@@ -129,7 +131,14 @@ const handler = async (req: Request): Promise<Response> => {
     }: ApprovalEmailRequest = await req.json();
 
     // Validate required fields
-    if (!voucherId || !action || !recipientEmail || !employeeName || !month) {
+    if (!voucherId || !UUID_REGEX.test(voucherId)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid or missing voucherId" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!action || !recipientEmail || !employeeName || !month) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }

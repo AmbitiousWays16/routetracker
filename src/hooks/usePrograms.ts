@@ -42,7 +42,7 @@ export const usePrograms = () => {
       // Fetch all programs (shared for all users)
       const { data, error } = await supabase
         .from('programs')
-        .select('*')
+        .select('id, name, address, user_id, created_at, updated_at')
         .order('name');
 
       if (error) throw error;
