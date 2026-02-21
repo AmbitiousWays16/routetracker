@@ -82,7 +82,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ArchivePromptDialog onExportComplete={refetch} />
+      <ArchivePromptDialog onExportComplete={() => refetch(selectedMonth)} />
       <Header trips={trips} totalMiles={totalMiles} />
       
       <main className="container mx-auto space-y-4 sm:space-y-6 px-2 sm:px-4 py-4 sm:py-6">

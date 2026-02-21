@@ -66,7 +66,6 @@ export default function Approvals() {
   const [signatureMode, setSignatureMode] = useState<'type' | 'draw'>('type');
   const [signatureError, setSignatureError] = useState('');
 
-  // Fetch approver's profile name on mount
   useEffect(() => {
     const fetchApproverProfile = async () => {
       if (!user) return;
@@ -96,7 +95,7 @@ export default function Approvals() {
 
   const fetchVoucherTrips = async (voucher: MileageVoucherRecord) => {
     setLoadingTrips(true);
-    setVoucherTrips([]); // Bug 5 Fix: Reset stale data immediately
+    setVoucherTrips([]);
     try {
       const monthStart = format(new Date(voucher.month), 'yyyy-MM-01');
       const monthEnd = format(new Date(new Date(voucher.month).getFullYear(), new Date(voucher.month).getMonth() + 1, 0), 'yyyy-MM-dd');
@@ -125,7 +124,6 @@ export default function Approvals() {
     setEmployeeEmail(data.email);
     setEmployeeName(data.name);
     
-    // Bug 5 Fix: Await the trips fetch before opening dialog to ensure no stale flash
     await fetchVoucherTrips(voucher);
     
     setNextApproverEmail('');
@@ -153,7 +151,6 @@ export default function Approvals() {
   const handleApprove = async () => {
     if (!selectedVoucher || !approverRole) return;
 
-    // Validate signature
     const hasValidSignature = signatureMode === 'type' 
       ? signatureText.trim().length > 0 
       : signatureImage !== null;
@@ -165,7 +162,6 @@ export default function Approvals() {
       return;
     }
 
-    // Validate employee email
     const emailResult = emailSchema.safeParse(employeeEmail.trim());
     if (!emailResult.success) {
       setEmailError(emailResult.error.errors[0].message);
@@ -244,15 +240,15 @@ export default function Approvals() {
   const isFinalApprover = approverRole === 'coo';
 
   return (
-    <div className=\"min-h-screen bg-background\">
+    <div className="min-h-screen bg-background">
       <Header trips={[]} totalMiles={0} />
       
-      <main className=\"container mx-auto space-y-6 px-4 py-6\">
-        <div className=\"flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4\">
+      <main className="container mx-auto space-y-6 px-4 py-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className=\"text-2xl font-bold\">Approval Queue</h1>
+            <h1 className="text-2xl font-bold">Approval Queue</h1>
             {approverRole && (
-              <p className=\"text-muted-foreground\">
+              <p className="text-muted-foreground">
                 Reviewing as {getRoleDisplayName(approverRole)}
               </p>
             )}
@@ -260,56 +256,56 @@ export default function Approvals() {
         </div>
 
         {loading ? (
-          <div className=\"flex items-center justify-center py-12\">
-            <Loader2 className=\"h-8 w-8 animate-spin text-muted-foreground\" />
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : !approverRole ? (
-          <Card className=\"shadow-card\">
-            <CardContent className=\"py-12 text-center\">
-              <User className=\"h-12 w-12 mx-auto text-muted-foreground mb-4\" />
-              <h3 className=\"text-lg font-medium mb-2\">No Approver Role</h3>
-              <p className=\"text-muted-foreground\">
+          <Card className="shadow-card">
+            <CardContent className="py-12 text-center">
+              <User className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Approver Role</h3>
+              <p className="text-muted-foreground">
                 You don't have an approver role assigned.
               </p>
             </CardContent>
           </Card>
         ) : pendingVouchers.length === 0 ? (
-          <Card className=\"shadow-card\">
-            <CardContent className=\"py-12 text-center\">
-              <CheckCircle className=\"h-12 w-12 mx-auto text-green-500 mb-4\" />
-              <h3 className=\"text-lg font-medium mb-2\">All Caught Up!</h3>
-              <p className=\"text-muted-foreground\">No vouchers are pending your approval.</p>
+          <Card className="shadow-card">
+            <CardContent className="py-12 text-center">
+              <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-4" />
+              <h3 className="text-lg font-medium mb-2">All Caught Up!</h3>
+              <p className="text-muted-foreground">No vouchers are pending your approval.</p>
             </CardContent>
           </Card>
         ) : (
-          <div className=\"grid gap-4\">
+          <div className="grid gap-4">
             {pendingVouchers.map((voucher) => (
-              <Card key={voucher.id} className=\"shadow-card\">
+              <Card key={voucher.id} className="shadow-card">
                 <CardHeader>
-                  <div className=\"flex justify-between items-start\">
+                  <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className=\"flex items-center gap-2\">
-                        <Calendar className=\"h-5 w-5\" />
+                      <CardTitle className="flex items-center gap-2">
+                        <Calendar className="h-5 w-5" />
                         {format(new Date(voucher.month), 'MMMM yyyy')}
                       </CardTitle>
                       <CardDescription>
                         Submitted {voucher.submitted_at ? format(new Date(voucher.submitted_at), 'MMM d, yyyy') : 'N/A'}
                       </CardDescription>
                     </div>
-                    <div className=\"text-right\">
-                      <div className=\"text-2xl font-bold text-primary\">{voucher.total_miles.toFixed(1)}</div>
-                      <div className=\"text-sm text-muted-foreground\">miles</div>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-primary">{voucher.total_miles.toFixed(1)}</div>
+                      <div className="text-sm text-muted-foreground">miles</div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className=\"flex flex-col sm:flex-row gap-2\">
-                    <Button onClick={() => handleApproveClick(voucher)} className=\"gap-2\">
-                      <Eye className=\"h-4 w-4\" />
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button onClick={() => handleApproveClick(voucher)} className="gap-2">
+                      <Eye className="h-4 w-4" />
                       Review & Approve
                     </Button>
-                    <Button variant=\"destructive\" onClick={() => handleRejectClick(voucher)} className=\"gap-2\">
-                      <XCircle className=\"h-4 w-4\" />
+                    <Button variant="destructive" onClick={() => handleRejectClick(voucher)} className="gap-2">
+                      <XCircle className="h-4 w-4" />
                       Return for Corrections
                     </Button>
                   </div>
@@ -321,7 +317,7 @@ export default function Approvals() {
       </main>
 
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
-        <DialogContent className=\"max-w-3xl max-h-[90vh] overflow-hidden flex flex-col\">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Voucher Review</DialogTitle>
             <DialogDescription>
@@ -329,37 +325,37 @@ export default function Approvals() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className=\"flex-1 overflow-y-auto space-y-6 py-4 px-1\">
-            <div className=\"space-y-4\">
-              <h3 className=\"text-sm font-semibold uppercase tracking-wider text-muted-foreground\">Trip Details</h3>
+          <div className="flex-1 overflow-y-auto space-y-6 py-4 px-1">
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Trip Details</h3>
               {loadingTrips ? (
-                <div className=\"flex items-center justify-center py-8\">
-                  <Loader2 className=\"h-6 w-6 animate-spin\" />
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
               ) : (
-                <div className=\"border rounded-lg overflow-hidden\">
-                  <table className=\"w-full text-sm\">
-                    <thead className=\"bg-muted/50\">
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
                       <tr>
-                        <th className=\"px-4 py-2 text-left\">Date</th>
-                        <th className=\"px-4 py-2 text-left\">Route</th>
-                        <th className=\"px-4 py-2 text-right\">Miles</th>
+                        <th className="px-4 py-2 text-left">Date</th>
+                        <th className="px-4 py-2 text-left">Route</th>
+                        <th className="px-4 py-2 text-right">Miles</th>
                       </tr>
                     </thead>
-                    <tbody className=\"divide-y\">
+                    <tbody className="divide-y">
                       {voucherTrips.map((trip) => (
                         <tr key={trip.id}>
-                          <td className=\"px-4 py-2\">{format(new Date(trip.date), 'MM/dd')}</td>
-                          <td className=\"px-4 py-2\">
-                            <div className=\"text-xs font-medium\">{trip.from_address}</div>
-                            <div className=\"text-xs text-muted-foreground\">→ {trip.to_address}</div>
+                          <td className="px-4 py-2">{format(new Date(trip.date), 'MM/dd')}</td>
+                          <td className="px-4 py-2">
+                            <div className="text-xs font-medium">{trip.from_address}</div>
+                            <div className="text-xs text-muted-foreground">→ {trip.to_address}</div>
                           </td>
-                          <td className=\"px-4 py-2 text-right font-mono\">{Number(trip.miles).toFixed(1)}</td>
+                          <td className="px-4 py-2 text-right font-mono">{Number(trip.miles).toFixed(1)}</td>
                         </tr>
                       ))}
-                      <tr className=\"bg-muted/30 font-bold\">
-                        <td colSpan={2} className=\"px-4 py-2 text-right\">Total Miles:</td>
-                        <td className=\"px-4 py-2 text-right font-mono\">{selectedVoucher?.total_miles.toFixed(1)}</td>
+                      <tr className="bg-muted/30 font-bold">
+                        <td colSpan={2} className="px-4 py-2 text-right">Total Miles:</td>
+                        <td className="px-4 py-2 text-right font-mono">{selectedVoucher?.total_miles.toFixed(1)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -367,38 +363,38 @@ export default function Approvals() {
               )}
             </div>
             <hr />
-            <div className=\"space-y-4\">
-              <div className=\"grid sm:grid-cols-2 gap-4\">
-                <div className=\"space-y-2\">
-                  <Label htmlFor=\"approver-name\">Approver Name</Label>
-                  <Input id=\"approver-name\" value={approverName} onChange={(e) => setApproverName(e.target.value)} />
+            <div className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="approver-name">Approver Name</Label>
+                  <Input id="approver-name" value={approverName} onChange={(e) => setApproverName(e.target.value)} />
                 </div>
-                <div className=\"space-y-2\">
-                  <Label htmlFor=\"employee-email\">Employee Email</Label>
-                  <Input id=\"employee-email\" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
+                <div className="space-y-2">
+                  <Label htmlFor="employee-email">Employee Email</Label>
+                  <Input id="employee-email" value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
                 </div>
               </div>
-              <div className=\"space-y-2\">
+              <div className="space-y-2">
                 <Label>Signature *</Label>
                 <Tabs value={signatureMode} onValueChange={(v) => setSignatureMode(v as 'type' | 'draw')}>
-                  <TabsList className=\"grid w-full grid-cols-2\">
-                    <TabsTrigger value=\"type\">Type</TabsTrigger>
-                    <TabsTrigger value=\"draw\">Draw</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="type">Type</TabsTrigger>
+                    <TabsTrigger value="draw">Draw</TabsTrigger>
                   </TabsList>
-                  <TabsContent value=\"type\" className=\"space-y-2 mt-2\">
+                  <TabsContent value="type" className="space-y-2 mt-2">
                     <Input 
                       value={signatureText} 
                       onChange={(e) => setSignatureText(e.target.value)}
-                      placeholder=\"Type signature\"
-                      className=\"text-2xl h-14\"
-                      style={{ fontFamily: \"'Dancing Script', cursive\" }}
+                      placeholder="Type signature"
+                      className="text-2xl h-14"
+                      style={{ fontFamily: "'Dancing Script', cursive" }}
                     />
                   </TabsContent>
-                  <TabsContent value=\"draw\" className=\"mt-2\">
+                  <TabsContent value="draw" className="mt-2">
                     <SignatureCanvas onSignatureChange={setSignatureImage} />
                   </TabsContent>
                 </Tabs>
-                {signatureError && <p className=\"text-sm text-destructive\">{signatureError}</p>}
+                {signatureError && <p className="text-sm text-destructive">{signatureError}</p>}
               </div>
               {needsNextApprover && (
                 <ApproverSelect
@@ -406,15 +402,15 @@ export default function Approvals() {
                   approvers={needsNextApprover === 'vp' ? getVPs() : getCOOs()}
                   value={nextApproverEmail}
                   onChange={setNextApproverEmail}
-                  placeholder=\"Select next approver\"
+                  placeholder="Select next approver"
                   loading={loadingApprovers}
                   error={nextEmailError}
                 />
               )}
             </div>
           </div>
-          <DialogFooter className=\"pt-4 border-t\">
-            <Button variant=\"outline\" onClick={() => setShowApproveDialog(false)}>Cancel</Button>
+          <DialogFooter className="pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)}>Cancel</Button>
             <Button onClick={handleApprove} disabled={processing}>
               {processing ? 'Approving...' : 'Approve Voucher'}
             </Button>
@@ -428,19 +424,19 @@ export default function Approvals() {
             <AlertDialogTitle>Return for Corrections</AlertDialogTitle>
             <AlertDialogDescription>Specify why this voucher needs corrections.</AlertDialogDescription>
           </AlertDialogHeader>
-          <div className=\"space-y-4 py-4\">
-            <div className=\"space-y-2\">
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
               <Label>Employee Email</Label>
               <Input value={employeeEmail} onChange={(e) => setEmployeeEmail(e.target.value)} />
             </div>
-            <div className=\"space-y-2\">
+            <div className="space-y-2">
               <Label>Reason</Label>
               <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} rows={3} />
             </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReject} disabled={processing} className=\"bg-destructive\">
+            <AlertDialogAction onClick={handleReject} disabled={processing} className="bg-destructive">
               {processing ? 'Returning...' : 'Return Voucher'}
             </AlertDialogAction>
           </AlertDialogFooter>

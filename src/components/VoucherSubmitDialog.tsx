@@ -39,7 +39,6 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
   const [submitting, setSubmitting] = useState(false);
   const [userName, setUserName] = useState('');
   
-  // Bug 5 Fix: Fetch user's profile name to pass correctly to submitVoucher
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
@@ -59,7 +58,6 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
   const canSubmit = trips.length > 0 && (!existingVoucher || existingVoucher.status === 'draft' || existingVoucher.status === 'rejected');
 
   const handleSubmit = async () => {
-    // Validate email
     const result = emailSchema.safeParse(supervisorEmail.trim());
     if (!result.success) {
       setEmailError(result.error.errors[0].message);
@@ -71,13 +69,11 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
     setSubmitting(true);
 
     try {
-      // Get or create the voucher
       const voucher = await getOrCreateVoucher(selectedMonth, totalMiles);
       if (!voucher) {
         throw new Error('Failed to create voucher');
       }
 
-      // Submit for approval with correct employee name
       const success = await submitVoucher(
         voucher.id,
         supervisorEmail.trim(),
@@ -109,8 +105,8 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
 
     return (
       <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm ${statusColors[existingVoucher.status]}`}>
-        {existingVoucher.status === 'approved' && <CheckCircle className=\"h-4 w-4\" />}
-        {existingVoucher.status === 'rejected' && <AlertCircle className=\"h-4 w-4\" />}
+        {existingVoucher.status === 'approved' && <CheckCircle className="h-4 w-4" />}
+        {existingVoucher.status === 'rejected' && <AlertCircle className="h-4 w-4" />}
         {getStatusDisplayName(existingVoucher.status)}
       </div>
     );
@@ -118,10 +114,10 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
 
   if (!canSubmit && existingVoucher) {
     return (
-      <div className=\"flex items-center gap-3\">
+      <div className="flex items-center gap-3">
         {renderVoucherStatus()}
         {existingVoucher.status !== 'approved' && existingVoucher.status !== 'draft' && (
-          <span className=\"text-sm text-muted-foreground\">
+          <span className="text-sm text-muted-foreground">
             Submitted {existingVoucher.submitted_at ? format(new Date(existingVoucher.submitted_at), 'MMM d, yyyy') : ''}
           </span>
         )}
@@ -133,11 +129,11 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button 
-          data-tour=\"submit-voucher\"
+          data-tour="submit-voucher"
           disabled={trips.length === 0}
-          className=\"gap-2\"
+          className="gap-2"
         >
-          <Send className=\"h-4 w-4\" />
+          <Send className="h-4 w-4" />
           {existingVoucher?.status === 'rejected' ? 'Resubmit for Approval' : 'Submit for Approval'}
         </Button>
       </DialogTrigger>
@@ -150,44 +146,44 @@ export function VoucherSubmitDialog({ selectedMonth, trips, totalMiles }: Vouche
         </DialogHeader>
 
         {existingVoucher?.status === 'rejected' && existingVoucher.rejection_reason && (
-          <Alert variant=\"destructive\">
-            <AlertCircle className=\"h-4 w-4\" />
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <strong>Previous submission was returned:</strong> {existingVoucher.rejection_reason}
             </AlertDescription>
           </Alert>
         )}
 
-        <div className=\"space-y-4 py-4\">
-          <div className=\"bg-muted/50 rounded-lg p-4\">
-            <div className=\"grid grid-cols-2 gap-2 text-sm\">
-              <span className=\"text-muted-foreground\">Month:</span>
-              <span className=\"font-medium\">{format(selectedMonth, 'MMMM yyyy')}</span>
-              <span className=\"text-muted-foreground\">Total Trips:</span>
-              <span className=\"font-medium\">{trips.length}</span>
-              <span className=\"text-muted-foreground\">Total Miles:</span>
-              <span className=\"font-medium\">{totalMiles.toFixed(1)} miles</span>
+        <div className="space-y-4 py-4">
+          <div className="bg-muted/50 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-muted-foreground">Month:</span>
+              <span className="font-medium">{format(selectedMonth, 'MMMM yyyy')}</span>
+              <span className="text-muted-foreground">Total Trips:</span>
+              <span className="font-medium">{trips.length}</span>
+              <span className="text-muted-foreground">Total Miles:</span>
+              <span className="font-medium">{totalMiles.toFixed(1)} miles</span>
             </div>
           </div>
 
           <ApproverSelect
-            label=\"Supervisor\"
+            label="Supervisor"
             approvers={supervisors}
             value={supervisorEmail}
             onChange={(value) => {
               setSupervisorEmail(value);
               setEmailError('');
             }}
-            placeholder=\"Select a supervisor\"
+            placeholder="Select a supervisor"
             loading={loadingApprovers}
             error={emailError}
-            helpText=\"Your supervisor will receive an email to review and approve your voucher.\"
+            helpText="Your supervisor will receive an email to review and approve your voucher."
             required
           />
         </div>
 
         <DialogFooter>
-          <Button variant=\"outline\" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
