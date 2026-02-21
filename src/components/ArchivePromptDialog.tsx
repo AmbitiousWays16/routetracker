@@ -84,7 +84,6 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
 
         if (data && data.length > 0) {
           const formattedTrips: Trip[] = data.map((trip) => {
-            // Parse routeMapData from static_map_url if it's stored as JSON
             let routeMapData: RouteMapData | undefined;
             if (trip.static_map_url) {
               try {
@@ -93,7 +92,7 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
                   routeMapData = parsed;
                 }
               } catch {
-                // Not JSON - legacy URL
+                // Not JSON
               }
             }
             return {
@@ -128,23 +127,9 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
     setIsExporting(true);
 
     try {
-      // Fix Bug 7: Precision in mileage calculation
       const totalMiles = Math.round(previousMonthTrips.reduce((sum, t) => sum + t.miles, 0) * 10) / 10;
       const reimbursement = totalMiles * MILEAGE_RATE;
-
-      let bannerDataUrl = '';
-      try {
-        const bannerResponse = await fetch('/images/westcare-banner.png');
-        const bannerBlob = await bannerResponse.blob();
-        bannerDataUrl = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(bannerBlob);
-        });
-      } catch {
-        bannerDataUrl = '';
-      }
-
+      
       const sortedTrips = [...previousMonthTrips].sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
@@ -171,22 +156,22 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
         const mapImageBase64 = mapImages[index];
 
         return `
-          <div class=\"trip-detail\" style=\"page-break-inside: avoid; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;\">
-            <div style=\"display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;\">
-              <h3 style=\"margin: 0; color: #1a1a2e; font-size: 16px;\">Trip ${index + 1}: ${format(new Date(trip.date), 'MMMM d, yyyy')}</h3>
-              <span style=\"background: #dbeafe; color: #3b82f6; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;\">${trip.miles.toFixed(1)} miles</span>
+          <div class="trip-detail" style="page-break-inside: avoid; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+              <h3 style="margin: 0; color: #1a1a2e; font-size: 16px;">Trip ${index + 1}: ${format(new Date(trip.date), 'MMMM d, yyyy')}</h3>
+              <span style="background: #dbeafe; color: #3b82f6; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 14px;">${trip.miles.toFixed(1)} miles</span>
             </div>
-            <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;\">
-              <div><p style=\"font-size: 11px; color: #64748b;\">From</p><p>${safeFromAddress}</p></div>
-              <div><p style=\"font-size: 11px; color: #64748b;\">To</p><p>${safeToAddress}</p></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+              <div><p style="font-size: 11px; color: #64748b;">From</p><p>${safeFromAddress}</p></div>
+              <div><p style="font-size: 11px; color: #64748b;">To</p><p>${safeToAddress}</p></div>
             </div>
-            <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;\">
-              <div><p style=\"font-size: 11px; color: #64748b;\">Purpose</p><p>${safePurpose}</p></div>
-              <div><p style=\"font-size: 11px; color: #64748b;\">Program</p><p>${safeProgram}</p></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
+              <div><p style="font-size: 11px; color: #64748b;">Purpose</p><p>${safePurpose}</p></div>
+              <div><p style="font-size: 11px; color: #64748b;">Program</p><p>${safeProgram}</p></div>
             </div>
-            <div style=\"background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;\">
-              ${mapImageBase64 ? `<img src=\"${mapImageBase64}\" style=\"width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;\" />` : '<p>No map image available</p>'}
-              <a href=\"${directionsUrl}\" target=\"_blank\" style=\"color: #3b82f6; text-decoration: none; font-size: 13px;\">📍 View Route on Google Maps →</a>
+            <div style="background: #f8fafc; border-radius: 6px; padding: 15px; text-align: center;">
+              ${mapImageBase64 ? `<img src="${mapImageBase64}" style="width: 100%; max-width: 600px; height: auto; border-radius: 6px; margin-bottom: 10px;" />` : '<p>No map image available</p>'}
+              <a href="${directionsUrl}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 13px;">📍 View Route on Google Maps →</a>
             </div>
           </div>
         `;
@@ -199,49 +184,59 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
         <body>
           <h1>MILEAGE VOUCHER</h1>
           <p>${previousMonthLabel}</p>
-          <div class=\"summary\" style=\"display:flex; justify-content:space-around; background:#eff6ff; padding:20px; border-radius:8px; margin:20px 0;\">
+          <div class="summary" style="display:flex; justify-content:space-around; background:#eff6ff; padding:20px; border-radius:8px; margin:20px 0;">
             <div><strong>${previousMonthTrips.length}</strong><br/>Trips</div>
             <div><strong>${totalMiles.toFixed(1)}</strong><br/>Miles</div>
             <div><strong>$${reimbursement.toFixed(2)}</strong><br/>Reimbursement</div>
           </div>
           <h2>Trip Summary</h2>
-          <table style=\"width:100%; border-collapse:collapse;\">
-            <thead><tr style=\"background:#3b82f6; color:white;\"><th>#</th><th>Date</th><th>From</th><th>To</th><th>Miles</th></tr></thead>
+          <table style="width:100%; border-collapse:collapse;">
+            <thead><tr style="background:#3b82f6; color:white;"><th>#</th><th>Date</th><th>From</th><th>To</th><th>Miles</th></tr></thead>
             <tbody>
               ${sortedTrips.map((t, i) => `<tr><td>${i+1}</td><td>${format(new Date(t.date), 'MM/dd')}</td><td>${escapeHtml(t.fromAddress)}</td><td>${escapeHtml(t.toAddress)}</td><td>${t.miles.toFixed(1)}</td></tr>`).join('')}
             </tbody>
           </table>
-          <div style=\"page-break-before:always;\"></div>
+          <div style="page-break-before:always;"></div>
           <h2>Trip Details</h2>
           ${tripRouteSections}
         </body>
         </html>
       `;
 
-      // Fix Bug 6: Handle window.open silent failure
       const printWindow = window.open('', '_blank');
       if (!printWindow) {
         toast.error('Popup blocked! Please allow popups for this site to export your PDF.');
         setIsExporting(false);
-        return; // Important: don't proceed to setIsOpen(false) or mark as prompted
+        return;
       }
 
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       printWindow.focus();
+
+      // Bug 4 Fix: Handle print cleanup correctly
+      const finalizeExport = () => {
+        const currentMonthKey = format(new Date(), 'yyyy-MM');
+        localStorage.setItem(ARCHIVE_PROMPT_KEY, currentMonthKey);
+        setIsOpen(false);
+        onExportComplete();
+        setIsExporting(false);
+      };
+
+      // Try to use afterprint event, fallback to timeout
+      printWindow.onafterprint = finalizeExport;
+      
       setTimeout(() => {
         printWindow.print();
-      }, 250);
+        // If onafterprint isn't supported or doesn't fire (some browsers), finalize after a delay
+        if (printWindow.closed || !('onafterprint' in window)) {
+           finalizeExport();
+        }
+      }, 500);
 
-      // Only mark as prompted if window opened successfully
-      const currentMonthKey = format(new Date(), 'yyyy-MM');
-      localStorage.setItem(ARCHIVE_PROMPT_KEY, currentMonthKey);
-      setIsOpen(false);
-      onExportComplete();
     } catch (error) {
       console.error('Export error:', error);
       toast.error('Failed to generate PDF. Please try again.');
-    } finally {
       setIsExporting(false);
     }
   };
@@ -253,29 +248,28 @@ export const ArchivePromptDialog = ({ onExportComplete }: ArchivePromptDialogPro
     onExportComplete();
   };
 
-  // Fix Bug 7: Precision in mileage calculation for the main dialog display
   const totalMiles = Math.round(previousMonthTrips.reduce((sum, t) => sum + t.miles, 0) * 10) / 10;
 
   return (
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
-      <AlertDialogContent className=\"max-w-md\">
+      <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
-          <div className=\"mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10\">
-            <Archive className=\"h-6 w-6 text-primary\" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <Archive className="h-6 w-6 text-primary" />
           </div>
-          <AlertDialogTitle className=\"text-center\">Archive {previousMonthLabel} Trips</AlertDialogTitle>
-          <AlertDialogDescription className=\"text-center\">
-            You have <span className=\"font-semibold\">{previousMonthTrips.length} trips</span> ({totalMiles.toFixed(1)} miles) from {previousMonthLabel}.
+          <AlertDialogTitle className="text-center">Archive {previousMonthLabel} Trips</AlertDialogTitle>
+          <AlertDialogDescription className="text-center">
+            You have <span className="font-semibold">{previousMonthTrips.length} trips</span> ({totalMiles.toFixed(1)} miles) from {previousMonthLabel}.
             Would you like to export them to PDF before starting the new month?
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogFooter className=\"flex-col gap-2\">
-          <Button onClick={handleExport} disabled={isExporting} className=\"w-full\">
-            {isExporting ? <Loader2 className=\"mr-2 h-4 w-4 animate-spin\" /> : <FileDown className=\"mr-2 h-4 w-4\" />}
+        <AlertDialogFooter className="flex-col gap-2">
+          <Button onClick={handleExport} disabled={isExporting} className="w-full">
+            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
             Export to PDF
           </Button>
           <AlertDialogCancel asChild>
-            <Button variant=\"ghost\" onClick={handleSkip} className=\"w-full\">Skip for now</Button>
+            <Button variant="ghost" onClick={handleSkip} className="w-full">Skip for now</Button>
           </AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
