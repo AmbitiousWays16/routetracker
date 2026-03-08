@@ -300,9 +300,22 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
     });
 
     if (!response.ok) {
-      // Log detailed error server-side only - don't expose to client
       const errorText = await response.text();
       console.error('AI service error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'AI rate limit exceeded. Please try again later.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       return new Response(JSON.stringify({ error: 'Unable to generate suggestions. Please try again later.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
