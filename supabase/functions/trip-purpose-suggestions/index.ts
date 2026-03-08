@@ -216,10 +216,10 @@ serve(async (req) => {
       });
     }
 
-    // Get Perplexity API key
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
-    if (!perplexityApiKey) {
-      console.error('PERPLEXITY_API_KEY is not configured');
+    // Get Lovable AI API key
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY is not configured');
       return new Response(JSON.stringify({ error: 'AI service not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -277,16 +277,16 @@ Requirements:
 Return ONLY a JSON array of 5 strings, no other text. Example format:
 ["Client home visit for case management follow-up", "Site inspection for program compliance review", "Training session delivery for staff development", "Community outreach event for prevention program", "Court appearance for client advocacy support"]`;
 
-    console.log('Requesting AI suggestions from Perplexity');
+    console.log('Requesting AI suggestions from Lovable AI Gateway');
 
-    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${perplexityApiKey}`,
+        'Authorization': `Bearer ${lovableApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sonar',
+        model: 'google/gemini-3-flash-preview',
         messages: [
           { 
             role: 'system', 
@@ -300,9 +300,22 @@ Return ONLY a JSON array of 5 strings, no other text. Example format:
     });
 
     if (!response.ok) {
-      // Log detailed error server-side only - don't expose to client
       const errorText = await response.text();
       console.error('AI service error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: 'AI rate limit exceeded. Please try again later.' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json', 'Retry-After': '60' },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: 'AI usage limit reached. Please try again later.' }), {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       return new Response(JSON.stringify({ error: 'Unable to generate suggestions. Please try again later.' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
