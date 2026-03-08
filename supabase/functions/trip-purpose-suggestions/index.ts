@@ -216,10 +216,10 @@ serve(async (req) => {
       });
     }
 
-    // Get Perplexity API key
-    const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
-    if (!perplexityApiKey) {
-      console.error('PERPLEXITY_API_KEY is not configured');
+    // Get Lovable AI API key
+    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    if (!lovableApiKey) {
+      console.error('LOVABLE_API_KEY is not configured');
       return new Response(JSON.stringify({ error: 'AI service not configured' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
