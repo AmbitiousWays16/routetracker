@@ -30,9 +30,7 @@ const allowedOrigins = [
 ];
 
 const getCorsHeaders = (origin: string | null) => {
-  // Strict origin matching - no wildcards for production security
   const isAllowed = origin && allowedOrigins.includes(origin);
-  
   return {
     'Access-Control-Allow-Origin': isAllowed ? origin : allowedOrigins[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -44,14 +42,22 @@ const getCorsHeaders = (origin: string | null) => {
 interface ApprovalEmailRequest {
   voucherId: string;
   action: "submit" | "approve" | "reject" | "final_approval";
-  recipientEmail: string;
+  // recipientEmail is now IGNORED — derived server-side
+  recipientEmail?: string;
   recipientName?: string;
-  employeeName: string;
+  employeeName?: string;
   month: string;
   totalMiles: number;
   rejectionReason?: string;
   nextApproverRole?: string;
 }
+
+const ROLE_HIERARCHY: Record<string, string> = {
+  submit: 'supervisor',
+  pending_supervisor: 'supervisor',
+  pending_vp: 'vp',
+  pending_coo: 'coo',
+};
 
 const getRoleDisplayName = (role: string): string => {
   const roleNames: Record<string, string> = {
@@ -76,17 +82,81 @@ const getStatusMessage = (action: string, nextRole?: string): string => {
   }
 };
 
+/**
+ * Derives the correct email recipient server-side based on action type and voucher data.
+ * Never trusts client-supplied recipientEmail.
+ */
+async function resolveRecipient(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  action: string,
+  voucherUserId: string,
+  nextApproverRole?: string
+): Promise<{ email: string; name: string | null } | null> {
+  if (action === 'reject' || (action === 'approve' && !nextApproverRole)) {
+    // Send to voucher owner (employee)
+    const { data: ownerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, full_name')
+      .eq('user_id', voucherUserId)
+      .maybeSingle();
+
+    if (!ownerProfile?.email) return null;
+    return { email: ownerProfile.email, name: ownerProfile.full_name };
+  }
+
+  if (action === 'submit' || (action === 'approve' && nextApproverRole)) {
+    // Send to next approver by role
+    const targetRole = nextApproverRole || 'supervisor';
+    const { data: roleUsers } = await supabaseAdmin
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', targetRole);
+
+    if (!roleUsers || roleUsers.length === 0) return null;
+
+    // Get the first user with this role (or could be extended for assignment logic)
+    const { data: approverProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, full_name')
+      .eq('user_id', roleUsers[0].user_id)
+      .maybeSingle();
+
+    if (!approverProfile?.email) return null;
+    return { email: approverProfile.email, name: approverProfile.full_name };
+  }
+
+  if (action === 'final_approval') {
+    // Send to accountant
+    const { data: accountantRoles } = await supabaseAdmin
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'accountant');
+
+    if (!accountantRoles || accountantRoles.length === 0) return null;
+
+    const { data: accountantProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('email, full_name')
+      .eq('user_id', accountantRoles[0].user_id)
+      .maybeSingle();
+
+    if (!accountantProfile?.email) return null;
+    return { email: accountantProfile.email, name: accountantProfile.full_name };
+  }
+
+  return null;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   const origin = req.headers.get('Origin');
   const corsHeaders = getCorsHeaders(origin);
 
-  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify JWT using getUser
+    // Verify JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { 
@@ -101,8 +171,6 @@ const handler = async (req: Request): Promise<Response> => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Service client used ONLY for server-side reads needed for authorization.
-    // This avoids RLS issues after approvers change voucher status (e.g., pending_supervisor -> pending_vp).
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -121,9 +189,6 @@ const handler = async (req: Request): Promise<Response> => {
     const {
       voucherId,
       action,
-      recipientEmail,
-      recipientName,
-      employeeName,
       month,
       totalMiles,
       rejectionReason,
@@ -138,16 +203,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (!action || !recipientEmail || !employeeName || !month) {
+    if (!action || !month) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
+    // Validate action is one of the allowed values
+    const allowedActions = ['submit', 'approve', 'reject', 'final_approval'];
+    if (!allowedActions.includes(action)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid action" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // === AUTHORIZATION CHECK ===
-    // Use service role to load voucher metadata (bypasses RLS).
-    // Caller is still authenticated via JWT (above) and must be owner or an approver.
     const { data: voucher, error: voucherError } = await supabaseAdmin
       .from('mileage_vouchers')
       .select('user_id, status')
@@ -161,17 +233,14 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if user is the voucher owner
     const isOwner = voucher.user_id === user.id;
 
-    // Check if user has an approver role (queried with user JWT)
     const { data: userRoles, error: rolesError } = await supabaseUser
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id);
 
     if (rolesError) {
-      // Don't leak details to caller; log server-side for debugging.
       console.error('Error fetching user roles for authorization:', rolesError);
     }
 
@@ -179,13 +248,31 @@ const handler = async (req: Request): Promise<Response> => {
       ['supervisor', 'vp', 'coo', 'admin'].includes(r.role)
     );
 
-    // User must be either the voucher owner OR have an approver role
     if (!isOwner && !hasApproverRole) {
       return new Response(
         JSON.stringify({ error: "Unauthorized: You do not have permission to send notifications for this voucher" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // === DERIVE RECIPIENT SERVER-SIDE ===
+    const recipient = await resolveRecipient(supabaseAdmin, action, voucher.user_id, nextApproverRole);
+    if (!recipient) {
+      console.error(`Could not resolve recipient for action=${action}, nextApproverRole=${nextApproverRole}`);
+      return new Response(
+        JSON.stringify({ error: "Could not determine email recipient" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Derive employee name server-side
+    const { data: employeeProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, email')
+      .eq('user_id', voucher.user_id)
+      .maybeSingle();
+
+    const employeeName = employeeProfile?.full_name || employeeProfile?.email || 'Employee';
 
     const appUrl = Deno.env.get("APP_URL") || "https://routetracker.lovable.app";
     const approvalUrl = `${appUrl}/approvals?voucher=${voucherId}`;
@@ -196,22 +283,22 @@ const handler = async (req: Request): Promise<Response> => {
     let ctaUrl: string;
 
     if (action === "submit" || (action === "approve" && nextApproverRole)) {
-      subject = `Mileage Voucher Pending Approval - ${employeeName} (${month})`;
+      subject = `Mileage Voucher Pending Approval - ${escapeHtml(employeeName)} (${escapeHtml(month)})`;
       heading = "Mileage Voucher Awaiting Your Approval";
       ctaText = "Review & Approve";
       ctaUrl = approvalUrl;
     } else if (action === "final_approval") {
-      subject = `Mileage Voucher Ready for Processing - ${employeeName} (${month})`;
+      subject = `Mileage Voucher Ready for Processing - ${escapeHtml(employeeName)} (${escapeHtml(month)})`;
       heading = "Approved Mileage Voucher Ready for Processing";
       ctaText = "View Approved Voucher";
       ctaUrl = `${appUrl}`;
     } else if (action === "approve") {
-      subject = `Mileage Voucher Approved - ${month}`;
+      subject = `Mileage Voucher Approved - ${escapeHtml(month)}`;
       heading = "Your Mileage Voucher Has Been Approved";
       ctaText = "View Voucher";
       ctaUrl = `${appUrl}/vouchers`;
     } else {
-      subject = `Mileage Voucher Returned - ${month}`;
+      subject = `Mileage Voucher Returned - ${escapeHtml(month)}`;
       heading = "Your Mileage Voucher Requires Corrections";
       ctaText = "Review & Resubmit";
       ctaUrl = `${appUrl}`;
@@ -229,7 +316,7 @@ const handler = async (req: Request): Promise<Response> => {
             <h1 style="color: white; margin: 0; font-size: 24px;">${heading}</h1>
           </div>
           <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-            <p style="margin-top: 0;">Hello${recipientName ? ` ${escapeHtml(recipientName)}` : ""},</p>
+            <p style="margin-top: 0;">Hello${recipient.name ? ` ${escapeHtml(recipient.name)}` : ""},</p>
             <p>${getStatusMessage(action, nextApproverRole)}</p>
             
             <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -245,7 +332,7 @@ const handler = async (req: Request): Promise<Response> => {
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #666;">Total Miles:</td>
-                  <td style="padding: 8px 0; font-weight: 500;">${totalMiles.toFixed(1)} miles</td>
+                  <td style="padding: 8px 0; font-weight: 500;">${Number(totalMiles || 0).toFixed(1)} miles</td>
                 </tr>
               </table>
             </div>
@@ -272,11 +359,11 @@ const handler = async (req: Request): Promise<Response> => {
       </html>
     `;
 
-    console.log(`Processing ${action} notification`);
+    console.log(`Processing ${action} notification to server-derived recipient`);
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "WestCare Mileage Tracker <onboarding@resend.dev>",
-      to: [recipientEmail],
+      to: [recipient.email],
       subject: subject,
       html: emailHtml,
     });
@@ -296,9 +383,8 @@ const handler = async (req: Request): Promise<Response> => {
     const origin = req.headers.get('Origin');
     const corsHeaders = getCorsHeaders(origin);
     console.error("Error in send-approval-email function:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: "Failed to send notification" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
