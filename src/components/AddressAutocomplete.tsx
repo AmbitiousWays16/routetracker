@@ -26,11 +26,12 @@ export const AddressAutocomplete = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filter programs based on input - match by name or address
-  const filteredPrograms = value.trim()
+  const safeValue = value || '';
+  const filteredPrograms = safeValue.trim()
     ? programs.filter(
         (p) =>
-          p.name.toLowerCase().includes(value.toLowerCase()) ||
-          p.address.toLowerCase().includes(value.toLowerCase())
+          (p.name && p.name.toLowerCase().includes(safeValue.toLowerCase())) ||
+          (p.address && p.address.toLowerCase().includes(safeValue.toLowerCase()))
       )
     : [];
 
@@ -59,7 +60,7 @@ export const AddressAutocomplete = ({
   };
 
   const handleSelect = (program: Program) => {
-    onChange(program.address);
+    onChange(program.address || '');
     setIsOpen(false);
     inputRef.current?.focus();
   };
