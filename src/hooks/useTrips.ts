@@ -73,7 +73,7 @@ export const useTrips = () => {
 
   useEffect(() => {
     fetchTrips(selectedMonth);
-  }, [selectedMonth, user]);
+  }, [selectedMonth, user, fetchTrips]);
 
   const changeMonth = useCallback((newMonth: Date) => {
     setSelectedMonth(newMonth);
