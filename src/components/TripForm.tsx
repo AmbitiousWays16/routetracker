@@ -11,6 +11,7 @@ import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ProxyMapImage } from './ProxyMapImage';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
@@ -73,35 +74,34 @@ export const TripForm = ({
   const [isGeneratingPurpose, setIsGeneratingPurpose] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
 
-  const handleGeneratePurpose = () => {
+  const handleGeneratePurpose = async () => {
     setIsGeneratingPurpose(true);
-    // Simulate AI generation delay
-    setTimeout(() => {
-      let purpose = "";
-      if (program && toAddress) {
-        const templates = [
-          `Routine site visit for ${program} at ${toAddress}`,
-          `Meeting with client at ${toAddress} regarding ${program}`,
-          `Delivery and inspection for ${program}`
-        ];
-        purpose = templates[Math.floor(Math.random() * templates.length)];
-      } else if (program) {
-        purpose = `Routine site visit for ${program}`;
-      } else if (toAddress) {
-        purpose = `Meeting with client at ${toAddress}`;
-      } else {
-        const standardTemplates = [
-          "Regular maintenance check",
-          "Client consultation",
-          "Site inspection",
-          "Equipment delivery"
-        ];
-        purpose = standardTemplates[Math.floor(Math.random() * standardTemplates.length)];
+    try {
+      const { data, error } = await supabase.functions.invoke('trip-purpose-suggestions', {
+        body: { program, toAddress },
+      });
+
+      if (error) {
+        console.error('AI suggestion error:', error);
+        toast.error('Failed to generate suggestion');
+        return;
       }
-      setBusinessPurpose(purpose);
+
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.suggestion) {
+        setBusinessPurpose(data.suggestion);
+        toast.success('AI suggestion generated');
+      }
+    } catch (err) {
+      console.error('AI suggestion error:', err);
+      toast.error('Failed to generate suggestion');
+    } finally {
       setIsGeneratingPurpose(false);
-      toast.success("AI suggestion generated");
-    }, 600);
+    }
   };
 
   const handleProgramChange = (programName: string) => {

@@ -17,29 +17,35 @@ export type Database = {
       approval_history: {
         Row: {
           acted_at: string
+          acted_date: string | null
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
+          approver_name: string | null
           approver_role: Database["public"]["Enums"]["app_role"]
-          comments: string | null
           id: string
+          signature_text: string | null
           voucher_id: string
         }
         Insert: {
           acted_at?: string
+          acted_date?: string | null
           action: Database["public"]["Enums"]["approval_action"]
           approver_id: string
+          approver_name?: string | null
           approver_role: Database["public"]["Enums"]["app_role"]
-          comments?: string | null
           id?: string
+          signature_text?: string | null
           voucher_id: string
         }
         Update: {
           acted_at?: string
+          acted_date?: string | null
           action?: Database["public"]["Enums"]["approval_action"]
           approver_id?: string
+          approver_name?: string | null
           approver_role?: Database["public"]["Enums"]["app_role"]
-          comments?: string | null
           id?: string
+          signature_text?: string | null
           voucher_id?: string
         }
         Relationships: [
@@ -95,21 +101,33 @@ export type Database = {
         Row: {
           created_at: string
           email: string | null
+          full_name: string | null
           id: string
+          job_title: string | null
+          signature_text: string | null
+          signature_type: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id?: string
+          job_title?: string | null
+          signature_text?: string | null
+          signature_type?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           email?: string | null
+          full_name?: string | null
           id?: string
+          job_title?: string | null
+          signature_text?: string | null
+          signature_type?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -187,6 +205,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_addresses: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -210,9 +255,49 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      profiles_approver_view: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          job_title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          job_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          job_title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      archive_old_routes: { Args: { months_old?: number }; Returns: number }
+      get_route_stats: {
+        Args: { p_user_id: string }
+        Returns: {
+          avg_miles_per_trip: number
+          earliest_trip: string
+          latest_trip: string
+          total_miles: number
+          total_trips: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
