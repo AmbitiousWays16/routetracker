@@ -77,18 +77,24 @@ export const TripForm = ({
   const handleGeneratePurpose = async () => {
     setIsGeneratingPurpose(true);
     try {
-      const { data, error } = await supabase.functions.invoke('trip-purpose-suggestions', {
-        body: { program, toAddress },
-      });
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trip-purpose-suggestions`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ program, toAddress }),
+        }
+      );
 
-      if (error) {
-        console.error('AI suggestion error:', error);
-        toast.error('Failed to generate suggestion');
-        return;
-      }
+      const data = await response.json();
 
-      if (data?.error) {
-        toast.error(data.error);
+      if (!response.ok || data?.error) {
+        console.error('AI suggestion error:', data);
+        toast.error(data?.error || 'Failed to generate suggestion');
         return;
       }
 
@@ -98,7 +104,7 @@ export const TripForm = ({
       }
     } catch (err) {
       console.error('AI suggestion error:', err);
-      toast.error('Failed to generate suggestion');
+      toast.error('Failed to generate suggestion. Please try again.');
     } finally {
       setIsGeneratingPurpose(false);
     }
