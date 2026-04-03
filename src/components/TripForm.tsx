@@ -11,6 +11,7 @@ import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ProxyMapImage } from './ProxyMapImage';
+import { supabase } from '@/integrations/supabase/client';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
