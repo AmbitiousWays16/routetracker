@@ -6,14 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw, Sparkles } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
 import { Trip, RouteMapData } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
@@ -78,7 +70,39 @@ export const TripForm = ({
   const [routeUrl, setRouteUrl] = useState('');
   const [routeMapData, setRouteMapData] = useState<RouteMapData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isGeneratingPurpose, setIsGeneratingPurpose] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
+
+  const handleGeneratePurpose = () => {
+    setIsGeneratingPurpose(true);
+    // Simulate AI generation delay
+    setTimeout(() => {
+      let purpose = "";
+      if (program && toAddress) {
+        const templates = [
+          `Routine site visit for ${program} at ${toAddress}`,
+          `Meeting with client at ${toAddress} regarding ${program}`,
+          `Delivery and inspection for ${program}`
+        ];
+        purpose = templates[Math.floor(Math.random() * templates.length)];
+      } else if (program) {
+        purpose = `Routine site visit for ${program}`;
+      } else if (toAddress) {
+        purpose = `Meeting with client at ${toAddress}`;
+      } else {
+        const standardTemplates = [
+          "Regular maintenance check",
+          "Client consultation",
+          "Site inspection",
+          "Equipment delivery"
+        ];
+        purpose = standardTemplates[Math.floor(Math.random() * standardTemplates.length)];
+      }
+      setBusinessPurpose(purpose);
+      setIsGeneratingPurpose(false);
+      toast.success("AI suggestion generated");
+    }, 600);
+  };
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
@@ -289,78 +313,33 @@ export const TripForm = ({
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="purpose" className="text-sm font-medium">
-              Business Purpose
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="purpose"
-                placeholder="Describe the business purpose of this trip"
-                value={businessPurpose}
-                onChange={(e) => setBusinessPurpose(e.target.value)}
-                className="h-10 flex-1"
-              />
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon" 
-                    className="h-10 w-10 shrink-0 border-purple-200 hover:bg-purple-50 hover:text-purple-700 transition-colors" 
-                    title="AI Suggestions"
-                  >
-                    <Sparkles className="h-4 w-4 text-purple-500" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[300px]">
-                  <DropdownMenuLabel className="flex items-center gap-2 text-purple-600">
-                    <Sparkles className="h-3.5 w-3.5" />
-                    AI Suggestions
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setBusinessPurpose(`Routine site visit${program ? ` for ${program}` : ''}`);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Routine site visit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setBusinessPurpose(`Meeting with client${toAddress ? ` at ${toAddress}` : ''}`);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Meeting with client
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setBusinessPurpose(`Delivery and inspection${program ? ` for ${program}` : ''}`);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Delivery and inspection
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setBusinessPurpose(`Consultation and review${program ? ` for ${program}` : ''}`);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Consultation and review
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setBusinessPurpose(`Regular maintenance check${toAddress ? ` at ${toAddress}` : ''}`);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    Regular maintenance check
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="purpose" className="text-sm font-medium">
+                Business Purpose
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 font-medium"
+                onClick={handleGeneratePurpose}
+                disabled={isGeneratingPurpose}
+              >
+                {isGeneratingPurpose ? (
+                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                )}
+                AI Suggest
+              </Button>
             </div>
+            <Input
+              id="purpose"
+              placeholder="Describe the business purpose of this trip"
+              value={businessPurpose}
+              onChange={(e) => setBusinessPurpose(e.target.value)}
+              className="h-10"
+            />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
