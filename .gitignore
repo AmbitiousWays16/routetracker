@@ -28,3 +28,7 @@ dist-ssr
 .env.local
 .env.production
 .env*.local
+
+# AI agents
+.agents/
+.claude/
