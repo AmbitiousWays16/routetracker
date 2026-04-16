@@ -1,6 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+} from 'firebase/firestore';
 import { toast } from 'sonner';
 
 export interface Program {
@@ -20,17 +31,14 @@ export const usePrograms = () => {
       setIsAdmin(false);
       return;
     }
-
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (error) throw error;
-      setIsAdmin(!!data);
+      const q = query(
+        collection(db, 'user_roles'),
+        where('user_id', '==', user.uid),
+        where('role', '==', 'admin')
+      );
+      const snapshot = await getDocs(q);
+      setIsAdmin(!snapshot.empty);
     } catch (error) {
       console.error('Error checking admin status:', error);
       setIsAdmin(false);
@@ -39,20 +47,13 @@ export const usePrograms = () => {
 
   const fetchPrograms = useCallback(async () => {
     try {
-      // Fetch all programs (shared for all users)
-      const { data, error } = await supabase
-        .from('programs')
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-
-      const formattedPrograms: Program[] = (data || []).map((p) => ({
-        id: p.id,
-        name: p.name,
-        address: p.address,
+      const q = query(collection(db, 'programs'), orderBy('name'));
+      const snapshot = await getDocs(q);
+      const formattedPrograms: Program[] = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        name: docSnap.data().name,
+        address: docSnap.data().address,
       }));
-
       setPrograms(formattedPrograms);
     } catch (error) {
       console.error('Error fetching programs:', error);
@@ -62,60 +63,26 @@ export const usePrograms = () => {
     }
   }, []);
 
-  useEffect(() => {
-    fetchPrograms();
-  }, [fetchPrograms]);
-
-  // Separate effect for admin status that re-runs when user changes
-  useEffect(() => {
-    checkAdminStatus();
-  }, [checkAdminStatus, user]);
+  useEffect(() => { fetchPrograms(); }, [fetchPrograms]);
+  useEffect(() => { checkAdminStatus(); }, [checkAdminStatus, user]);
 
   const addProgram = useCallback(async (name: string, address: string = ''): Promise<Program | null> => {
-    if (!user) {
-      toast.error('You must be logged in to add programs');
-      return null;
-    }
-
-    if (!isAdmin) {
-      toast.error('Only admins can add programs');
-      return null;
-    }
+    if (!user) { toast.error('You must be logged in to add programs'); return null; }
+    if (!isAdmin) { toast.error('Only admins can add programs'); return null; }
 
     const trimmedName = name.trim();
-    if (!trimmedName) {
-      toast.error('Program name cannot be empty');
-      return null;
-    }
+    if (!trimmedName) { toast.error('Program name cannot be empty'); return null; }
 
-    // Check for duplicate names
-    const duplicate = programs.find(
-      (p) => p.name.toLowerCase() === trimmedName.toLowerCase()
-    );
-    if (duplicate) {
-      toast.error('A program with this name already exists');
-      return null;
-    }
+    const duplicate = programs.find((p) => p.name.toLowerCase() === trimmedName.toLowerCase());
+    if (duplicate) { toast.error('A program with this name already exists'); return null; }
 
     try {
-      const { data, error } = await supabase
-        .from('programs')
-        .insert({
-          user_id: user.id,
-          name: trimmedName,
-          address: address.trim(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const newProgram: Program = {
-        id: data.id,
-        name: data.name,
-        address: data.address,
-      };
-
+      const docRef = await addDoc(collection(db, 'programs'), {
+        user_id: user.uid,
+        name: trimmedName,
+        address: address.trim(),
+      });
+      const newProgram: Program = { id: docRef.id, name: trimmedName, address: address.trim() };
       setPrograms((prev) => [...prev, newProgram].sort((a, b) => a.name.localeCompare(b.name)));
       toast.success('Program added successfully');
       return newProgram;
@@ -128,41 +95,22 @@ export const usePrograms = () => {
 
   const updateProgram = useCallback(async (id: string, updates: { name?: string; address?: string }): Promise<boolean> => {
     if (!user) return false;
-
-    if (!isAdmin) {
-      toast.error('Only admins can update programs');
-      return false;
-    }
+    if (!isAdmin) { toast.error('Only admins can update programs'); return false; }
 
     const trimmedName = updates.name?.trim();
-
-    // Check for duplicate names if name is being updated
     if (trimmedName) {
-      const duplicate = programs.find(
-        (p) => p.id !== id && p.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      if (duplicate) {
-        toast.error('A program with this name already exists');
-        return false;
-      }
+      const duplicate = programs.find((p) => p.id !== id && p.name.toLowerCase() === trimmedName.toLowerCase());
+      if (duplicate) { toast.error('A program with this name already exists'); return false; }
     }
 
     try {
       const dbUpdates: Record<string, string> = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name.trim();
       if (updates.address !== undefined) dbUpdates.address = updates.address.trim();
-
-      const { error } = await supabase
-        .from('programs')
-        .update(dbUpdates)
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await updateDoc(doc(db, 'programs', id), dbUpdates);
       setPrograms((prev) =>
-        prev
-          .map((p) => (p.id === id ? { ...p, ...updates } : p))
-          .sort((a, b) => a.name.localeCompare(b.name))
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+            .sort((a, b) => a.name.localeCompare(b.name))
       );
       toast.success('Program updated successfully');
       return true;
@@ -175,20 +123,9 @@ export const usePrograms = () => {
 
   const deleteProgram = useCallback(async (id: string): Promise<boolean> => {
     if (!user) return false;
-
-    if (!isAdmin) {
-      toast.error('Only admins can delete programs');
-      return false;
-    }
-
+    if (!isAdmin) { toast.error('Only admins can delete programs'); return false; }
     try {
-      const { error } = await supabase
-        .from('programs')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-
+      await deleteDoc(doc(db, 'programs', id));
       setPrograms((prev) => prev.filter((p) => p.id !== id));
       toast.success('Program deleted successfully');
       return true;
@@ -199,13 +136,5 @@ export const usePrograms = () => {
     }
   }, [user, isAdmin]);
 
-  return {
-    programs,
-    loading,
-    isAdmin,
-    addProgram,
-    updateProgram,
-    deleteProgram,
-    refetch: fetchPrograms,
-  };
+  return { programs, loading, isAdmin, addProgram, updateProgram, deleteProgram, refetch: fetchPrograms };
 };
