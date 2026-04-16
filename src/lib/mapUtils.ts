@@ -1,20 +1,17 @@
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
 import { RouteMapData } from '@/types/mileage';
 
-/**
- * Fetches a static map image through the secure proxy and returns it as a base64 data URL.
- * This is used for PDF generation where we need embedded images.
- */
 export const fetchMapImageAsBase64 = async (routeMapData: RouteMapData): Promise<string | null> => {
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (!sessionData.session) {
-      console.error('No session for map fetch');
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.error('No authenticated user for map fetch');
       return null;
     }
+    const token = await currentUser.getIdToken();
 
     const proxyUrl = new URL(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/static-map-proxy`
+      `${import.meta.env.VITE_WORKER_URL}/static-map-proxy`
     );
     proxyUrl.searchParams.set('polyline', routeMapData.encodedPolyline);
     proxyUrl.searchParams.set('startLat', String(routeMapData.startLat));
@@ -23,9 +20,7 @@ export const fetchMapImageAsBase64 = async (routeMapData: RouteMapData): Promise
     proxyUrl.searchParams.set('endLng', String(routeMapData.endLng));
 
     const response = await fetch(proxyUrl.toString(), {
-      headers: {
-        'Authorization': `Bearer ${sessionData.session.access_token}`,
-      },
+      headers: { 'Authorization': `Bearer ${token}` },
     });
 
     if (!response.ok) {

@@ -7,7 +7,7 @@ import { ArchivePromptDialog } from '@/components/ArchivePromptDialog';
 import { VoucherSubmitDialog } from '@/components/VoucherSubmitDialog';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 const Index = () => {
@@ -16,28 +16,37 @@ const Index = () => {
 
   const handleCalculateRoute = async (from: string, to: string) => {
     console.log('Starting route calculation...', { from: from.substring(0, 20), to: to.substring(0, 20) });
-    
+
     try {
-      // Check if user session exists before making the request
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        console.warn('No active session. Falling back to simulated route calculation.');
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        console.warn('No active user. Falling back to simulated route calculation.');
         toast.success('Route calculated (Simulated): 12.5 miles');
         return {
           miles: 12.5,
           routeUrl: `https://www.google.com/maps/dir/${encodeURIComponent(from)}/${encodeURIComponent(to)}`,
         };
       }
-      console.log('Session valid, making request...');
 
-      const { data, error } = await supabase.functions.invoke('google-maps-route', {
-        body: { fromAddress: from, toAddress: to },
-      });
+      const token = await currentUser.getIdToken();
+      console.log('Token acquired, making request...');
 
-      console.log('Route response received:', { hasData: !!data, hasError: !!error });
+      const response = await fetch(
+        `${import.meta.env.VITE_WORKER_URL}/google-maps-route`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ fromAddress: from, toAddress: to }),
+        }
+      );
 
-      if (error || data?.error) {
-        console.warn('Route API error or Edge Function failed. Falling back to simulated route.', error || data?.error);
+      console.log('Route response received:', { status: response.status });
+
+      if (!response.ok) {
+        console.warn('Route API error. Falling back to simulated route.');
         toast.success('Route calculated (Simulated fallback): 15.0 miles');
         return {
           miles: 15.0,
@@ -45,6 +54,7 @@ const Index = () => {
         };
       }
 
+      const data = await response.json();
       toast.success(`Route calculated: ${data.miles} miles`);
 
       return {
@@ -64,9 +74,7 @@ const Index = () => {
 
   const handleAddTrip = async (tripData: Parameters<typeof addTrip>[0]) => {
     const result = await addTrip(tripData);
-    if (result) {
-      toast.success('Trip added successfully!');
-    }
+    if (result) toast.success('Trip added successfully!');
   };
 
   const handleDeleteTrip = async (id: string) => {
@@ -78,20 +86,20 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <ArchivePromptDialog onExportComplete={refetch} />
       <Header trips={trips} totalMiles={totalMiles} />
-      
+
       <main className="container mx-auto space-y-6 px-4 py-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <MonthSelector selectedMonth={selectedMonth} onMonthChange={changeMonth} />
           {isCurrentMonth && (
-            <VoucherSubmitDialog 
-              selectedMonth={selectedMonth} 
-              trips={trips} 
-              totalMiles={totalMiles} 
+            <VoucherSubmitDialog
+              selectedMonth={selectedMonth}
+              trips={trips}
+              totalMiles={totalMiles}
             />
           )}
         </div>
         <MileageSummary trips={trips} totalMiles={totalMiles} />
-        
+
         <div className="grid gap-6 lg:grid-cols-2">
           {isCurrentMonth && (
             <TripForm
@@ -105,9 +113,9 @@ const Index = () => {
               onDeleteProgram={deleteProgram}
             />
           )}
-          <TripList 
-            trips={trips} 
-            onDelete={handleDeleteTrip} 
+          <TripList
+            trips={trips}
+            onDelete={handleDeleteTrip}
             totalMiles={totalMiles}
             isArchiveView={!isCurrentMonth}
           />

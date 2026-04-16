@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { auth } from '@/lib/firebase';
 import { Loader2, MapPin } from 'lucide-react';
 import { RouteMapData } from '@/types/mileage';
 
@@ -10,13 +10,9 @@ interface ProxyMapImageProps {
   alt?: string;
 }
 
-/**
- * Securely displays a route map by fetching through the authenticated proxy.
- * This prevents exposing Google Maps API keys in URLs.
- */
-export const ProxyMapImage = ({ 
-  routeMapData, 
-  routeUrl, 
+export const ProxyMapImage = ({
+  routeMapData,
+  routeUrl,
   className = '',
   alt = 'Route Map'
 }: ProxyMapImageProps) => {
@@ -38,18 +34,18 @@ export const ProxyMapImage = ({
         setLoading(true);
         setError(false);
 
-        // Get the current session for auth
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (!sessionData.session) {
-          console.error('No session for map fetch');
+        // Get Firebase ID token for auth
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          console.error('No authenticated user for map fetch');
           setError(true);
           setLoading(false);
           return;
         }
+        const token = await currentUser.getIdToken();
 
-        // Build the proxy URL with route parameters
         const proxyUrl = new URL(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/static-map-proxy`
+          `${import.meta.env.VITE_WORKER_URL}/static-map-proxy`
         );
         proxyUrl.searchParams.set('polyline', routeMapData.encodedPolyline);
         proxyUrl.searchParams.set('startLat', String(routeMapData.startLat));
@@ -59,17 +55,15 @@ export const ProxyMapImage = ({
 
         const response = await fetch(proxyUrl.toString(), {
           headers: {
-            'Authorization': `Bearer ${sessionData.session.access_token}`,
+            'Authorization': `Bearer ${token}`,
           },
         });
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch map: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`Failed to fetch map: ${response.status}`);
 
         const blob = await response.blob();
         objectUrl = URL.createObjectURL(blob);
-        
+
         if (isMounted) {
           setImageSrc(objectUrl);
           setLoading(false);
@@ -87,9 +81,7 @@ export const ProxyMapImage = ({
 
     return () => {
       isMounted = false;
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [routeMapData]);
 
@@ -107,12 +99,7 @@ export const ProxyMapImage = ({
         <MapPin className="h-6 w-6" />
         <span className="text-sm">Map unavailable</span>
         {routeUrl && (
-          <a 
-            href={routeUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-xs text-primary hover:underline"
-          >
+          <a href={routeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
             View on Google Maps
           </a>
         )}
@@ -121,19 +108,11 @@ export const ProxyMapImage = ({
   }
 
   const imageElement = (
-    <img
-      src={imageSrc}
-      alt={alt}
-      className={`h-auto w-full ${className}`}
-    />
+    <img src={imageSrc} alt={alt} className={`h-auto w-full ${className}`} />
   );
 
   if (routeUrl) {
-    return (
-      <a href={routeUrl} target="_blank" rel="noopener noreferrer">
-        {imageElement}
-      </a>
-    );
+    return <a href={routeUrl} target="_blank" rel="noopener noreferrer">{imageElement}</a>;
   }
 
   return imageElement;
