@@ -1,15 +1,25 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  query,
+  where,
+  orderBy,
+  getDocs,
+  addDoc,
+  updateDoc,
+  doc,
+  Timestamp,
+} from 'firebase/firestore';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { 
-  VoucherStatus, 
-  MileageVoucherRecord, 
-  ApprovalHistoryRecord,
+import {
+  VoucherStatus,
+  MileageVoucherRecord,
   getNextApproverRole,
   getStatusAfterApproval,
-  ApproverRole
+  ApproverRole,
 } from '@/types/voucher';
 
 export const useVouchers = () => {
@@ -23,18 +33,19 @@ export const useVouchers = () => {
       setLoading(false);
       return;
     }
-
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('mileage_vouchers')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('month', { ascending: false });
-
-      if (error) throw error;
-
-      setVouchers((data || []) as MileageVoucherRecord[]);
+      const q = query(
+        collection(db, 'mileage_vouchers'),
+        where('user_id', '==', user.uid),
+        orderBy('month', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const data: MileageVoucherRecord[] = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      } as MileageVoucherRecord));
+      setVouchers(data);
     } catch (error) {
       console.error('Error fetching vouchers:', error);
       toast.error('Failed to load vouchers');
@@ -43,56 +54,45 @@ export const useVouchers = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    fetchVouchers();
-  }, [fetchVouchers]);
+  useEffect(() => { fetchVouchers(); }, [fetchVouchers]);
 
   const getOrCreateVoucher = useCallback(async (month: Date, totalMiles: number): Promise<MileageVoucherRecord | null> => {
     if (!user) return null;
-
     const monthStr = format(month, 'yyyy-MM-01');
 
     try {
-      // Check if voucher exists
-      const { data: existing, error: fetchError } = await supabase
-        .from('mileage_vouchers')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('month', monthStr)
-        .maybeSingle();
+      const q = query(
+        collection(db, 'mileage_vouchers'),
+        where('user_id', '==', user.uid),
+        where('month', '==', monthStr)
+      );
+      const snapshot = await getDocs(q);
 
-      if (fetchError) throw fetchError;
-
-      if (existing) {
-        // Update total miles if changed
-        if (existing.total_miles !== totalMiles) {
-          const { data: updated, error: updateError } = await supabase
-            .from('mileage_vouchers')
-            .update({ total_miles: totalMiles })
-            .eq('id', existing.id)
-            .select()
-            .single();
-
-          if (updateError) throw updateError;
-          return updated as MileageVoucherRecord;
+      if (!snapshot.empty) {
+        const existing = snapshot.docs[0];
+        const existingData = existing.data() as MileageVoucherRecord;
+        if (existingData.total_miles !== totalMiles) {
+          await updateDoc(doc(db, 'mileage_vouchers', existing.id), { total_miles: totalMiles });
+          return { ...existingData, id: existing.id, total_miles: totalMiles };
         }
-        return existing as MileageVoucherRecord;
+        return { ...existingData, id: existing.id };
       }
 
-      // Create new voucher
-      const { data: created, error: createError } = await supabase
-        .from('mileage_vouchers')
-        .insert({
-          user_id: user.id,
-          month: monthStr,
-          total_miles: totalMiles,
-          status: 'draft' as VoucherStatus,
-        })
-        .select()
-        .single();
+      const docRef = await addDoc(collection(db, 'mileage_vouchers'), {
+        user_id: user.uid,
+        month: monthStr,
+        total_miles: totalMiles,
+        status: 'draft' as VoucherStatus,
+        created_at: Timestamp.now(),
+      });
 
-      if (createError) throw createError;
-      return created as MileageVoucherRecord;
+      return {
+        id: docRef.id,
+        user_id: user.uid,
+        month: monthStr,
+        total_miles: totalMiles,
+        status: 'draft' as VoucherStatus,
+      } as MileageVoucherRecord;
     } catch (error) {
       console.error('Error getting/creating voucher:', error);
       return null;
@@ -100,44 +100,25 @@ export const useVouchers = () => {
   }, [user]);
 
   const submitVoucher = useCallback(async (
-    voucherId: string, 
+    voucherId: string,
     supervisorEmail: string,
     employeeName: string,
     month: string,
     totalMiles: number
   ) => {
     if (!user) return false;
-
     try {
-      // Update voucher status
-      const { error: updateError } = await supabase
-        .from('mileage_vouchers')
-        .update({ 
-          status: 'pending_supervisor' as VoucherStatus,
-          submitted_at: new Date().toISOString(),
-          rejection_reason: null
-        })
-        .eq('id', voucherId)
-        .eq('user_id', user.id);
-
-      if (updateError) throw updateError;
-
-      // Send email notification to supervisor
-      const { error: emailError } = await supabase.functions.invoke('send-approval-email', {
-        body: {
-          voucherId,
-          action: 'submit',
-          recipientEmail: supervisorEmail,
-          employeeName,
-          month,
-          totalMiles,
-        },
+      await updateDoc(doc(db, 'mileage_vouchers', voucherId), {
+        status: 'pending_supervisor' as VoucherStatus,
+        submitted_at: new Date().toISOString(),
+        rejection_reason: null,
       });
 
-      if (emailError) {
-        console.error('Failed to send notification email:', emailError);
-        // Don't fail the submission if email fails
-      }
+      // TODO: Replace with Firebase Cloud Function email notification
+      console.log('Email notification stub — send-approval-email', {
+        voucherId, action: 'submit', recipientEmail: supervisorEmail,
+        employeeName, month, totalMiles,
+      });
 
       toast.success('Voucher submitted for approval');
       await fetchVouchers();
@@ -151,17 +132,10 @@ export const useVouchers = () => {
 
   const getVoucherForMonth = useCallback((month: Date): MileageVoucherRecord | undefined => {
     const monthStr = format(month, 'yyyy-MM-01');
-    return vouchers.find(v => v.month === monthStr);
+    return vouchers.find((v) => v.month === monthStr);
   }, [vouchers]);
 
-  return {
-    vouchers,
-    loading,
-    fetchVouchers,
-    getOrCreateVoucher,
-    submitVoucher,
-    getVoucherForMonth,
-  };
+  return { vouchers, loading, fetchVouchers, getOrCreateVoucher, submitVoucher, getVoucherForMonth };
 };
 
 export const useApproverVouchers = () => {
@@ -170,22 +144,15 @@ export const useApproverVouchers = () => {
   const [loading, setLoading] = useState(true);
   const [approverRole, setApproverRole] = useState<ApproverRole | null>(null);
 
-  const fetchApproverRole = useCallback(async () => {
+  const fetchApproverRole = useCallback(async (): Promise<ApproverRole | null> => {
     if (!user) return null;
-
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      // Check for approver roles in order of precedence
-      const roles = (data || []).map(r => r.role);
-      if (roles.includes('coo')) return 'coo' as ApproverRole;
-      if (roles.includes('vp')) return 'vp' as ApproverRole;
-      if (roles.includes('supervisor')) return 'supervisor' as ApproverRole;
+      const q = query(collection(db, 'user_roles'), where('user_id', '==', user.uid));
+      const snapshot = await getDocs(q);
+      const roles = snapshot.docs.map((d) => d.data().role as string);
+      if (roles.includes('coo')) return 'coo';
+      if (roles.includes('vp')) return 'vp';
+      if (roles.includes('supervisor')) return 'supervisor';
       return null;
     } catch (error) {
       console.error('Error fetching approver role:', error);
@@ -194,22 +161,12 @@ export const useApproverVouchers = () => {
   }, [user]);
 
   const fetchPendingVouchers = useCallback(async () => {
-    if (!user) {
-      setPendingVouchers([]);
-      setLoading(false);
-      return;
-    }
-
+    if (!user) { setPendingVouchers([]); setLoading(false); return; }
     try {
       setLoading(true);
       const role = await fetchApproverRole();
       setApproverRole(role);
-
-      if (!role) {
-        setPendingVouchers([]);
-        setLoading(false);
-        return;
-      }
+      if (!role) { setPendingVouchers([]); setLoading(false); return; }
 
       const statusMap: Record<ApproverRole, VoucherStatus> = {
         supervisor: 'pending_supervisor',
@@ -217,15 +174,13 @@ export const useApproverVouchers = () => {
         coo: 'pending_coo',
       };
 
-      const { data, error } = await supabase
-        .from('mileage_vouchers')
-        .select('*')
-        .eq('status', statusMap[role])
-        .order('submitted_at', { ascending: true });
-
-      if (error) throw error;
-
-      setPendingVouchers((data || []) as MileageVoucherRecord[]);
+      const q = query(
+        collection(db, 'mileage_vouchers'),
+        where('status', '==', statusMap[role]),
+        orderBy('submitted_at', 'asc')
+      );
+      const snapshot = await getDocs(q);
+      setPendingVouchers(snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as MileageVoucherRecord)));
     } catch (error) {
       console.error('Error fetching pending vouchers:', error);
       toast.error('Failed to load pending vouchers');
@@ -234,9 +189,7 @@ export const useApproverVouchers = () => {
     }
   }, [user, fetchApproverRole]);
 
-  useEffect(() => {
-    fetchPendingVouchers();
-  }, [fetchPendingVouchers]);
+  useEffect(() => { fetchPendingVouchers(); }, [fetchPendingVouchers]);
 
   const approveVoucher = useCallback(async (
     voucher: MileageVoucherRecord,
@@ -246,59 +199,35 @@ export const useApproverVouchers = () => {
     accountantEmail?: string
   ) => {
     if (!user || !approverRole) return false;
-
     try {
       const newStatus = getStatusAfterApproval(approverRole);
       const nextRole = getNextApproverRole(newStatus);
       const isFinalApproval = newStatus === 'approved';
-
-      // Update voucher status
-      const { error: updateError } = await supabase
-        .from('mileage_vouchers')
-        .update({ status: newStatus })
-        .eq('id', voucher.id);
-
-      if (updateError) throw updateError;
-
-      // Record approval in history
-      const { error: historyError } = await supabase
-        .from('approval_history')
-        .insert({
-          voucher_id: voucher.id,
-          approver_id: user.id,
-          approver_role: approverRole,
-          action: 'approve',
-        });
-
-      if (historyError) throw historyError;
-
-      // Send notification email to next approver or employee
-      const notificationEmail = nextApproverEmail || employeeEmail;
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
 
-      await supabase.functions.invoke('send-approval-email', {
-        body: {
-          voucherId: voucher.id,
-          action: 'approve',
-          recipientEmail: notificationEmail,
-          employeeName,
-          month: monthDisplay,
-          totalMiles: voucher.total_miles,
-          nextApproverRole: nextRole,
-        },
+      await updateDoc(doc(db, 'mileage_vouchers', voucher.id), { status: newStatus });
+
+      await addDoc(collection(db, 'approval_history'), {
+        voucher_id: voucher.id,
+        approver_id: user.uid,
+        approver_role: approverRole,
+        action: 'approve',
+        created_at: Timestamp.now(),
       });
 
-      // If final approval, also notify accountant
+      // TODO: Replace with Firebase Cloud Function email notification
+      console.log('Email notification stub — approve', {
+        voucherId: voucher.id, action: 'approve',
+        recipientEmail: nextApproverEmail || employeeEmail,
+        employeeName, month: monthDisplay,
+        totalMiles: voucher.total_miles, nextApproverRole: nextRole,
+      });
+
       if (isFinalApproval && accountantEmail) {
-        await supabase.functions.invoke('send-approval-email', {
-          body: {
-            voucherId: voucher.id,
-            action: 'final_approval',
-            recipientEmail: accountantEmail,
-            employeeName,
-            month: monthDisplay,
-            totalMiles: voucher.total_miles,
-          },
+        console.log('Email notification stub — final_approval', {
+          voucherId: voucher.id, action: 'final_approval',
+          recipientEmail: accountantEmail, employeeName,
+          month: monthDisplay, totalMiles: voucher.total_miles,
         });
       }
 
@@ -319,45 +248,28 @@ export const useApproverVouchers = () => {
     reason: string
   ) => {
     if (!user || !approverRole) return false;
-
     try {
-      // Update voucher status
-      const { error: updateError } = await supabase
-        .from('mileage_vouchers')
-        .update({ 
-          status: 'rejected' as VoucherStatus,
-          rejection_reason: reason
-        })
-        .eq('id', voucher.id);
-
-      if (updateError) throw updateError;
-
-      // Record rejection in history
-      const { error: historyError } = await supabase
-        .from('approval_history')
-        .insert({
-          voucher_id: voucher.id,
-          approver_id: user.id,
-          approver_role: approverRole,
-          action: 'reject',
-          comments: reason,
-        });
-
-      if (historyError) throw historyError;
-
-      // Send notification email to employee
       const monthDisplay = format(new Date(voucher.month), 'MMMM yyyy');
 
-      await supabase.functions.invoke('send-approval-email', {
-        body: {
-          voucherId: voucher.id,
-          action: 'reject',
-          recipientEmail: employeeEmail,
-          employeeName,
-          month: monthDisplay,
-          totalMiles: voucher.total_miles,
-          rejectionReason: reason,
-        },
+      await updateDoc(doc(db, 'mileage_vouchers', voucher.id), {
+        status: 'rejected' as VoucherStatus,
+        rejection_reason: reason,
+      });
+
+      await addDoc(collection(db, 'approval_history'), {
+        voucher_id: voucher.id,
+        approver_id: user.uid,
+        approver_role: approverRole,
+        action: 'reject',
+        comments: reason,
+        created_at: Timestamp.now(),
+      });
+
+      // TODO: Replace with Firebase Cloud Function email notification
+      console.log('Email notification stub — reject', {
+        voucherId: voucher.id, action: 'reject',
+        recipientEmail: employeeEmail, employeeName,
+        month: monthDisplay, totalMiles: voucher.total_miles, rejectionReason: reason,
       });
 
       toast.success('Voucher returned to employee');
@@ -370,12 +282,5 @@ export const useApproverVouchers = () => {
     }
   }, [user, approverRole, fetchPendingVouchers]);
 
-  return {
-    pendingVouchers,
-    loading,
-    approverRole,
-    fetchPendingVouchers,
-    approveVoucher,
-    rejectVoucher,
-  };
+  return { pendingVouchers, loading, approverRole, fetchPendingVouchers, approveVoucher, rejectVoucher };
 };

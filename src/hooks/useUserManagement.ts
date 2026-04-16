@@ -1,10 +1,19 @@
 import { useState, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  deleteDoc,
+  orderBy,
+} from 'firebase/firestore';
 import { toast } from 'sonner';
-import type { Database } from '@/integrations/supabase/types';
 
-type AppRole = Database['public']['Enums']['app_role'];
+// Local type replacing Supabase Database enum
+export type AppRole = 'admin' | 'supervisor' | 'vp' | 'coo' | 'user';
 
 export interface UserWithRoles {
   userId: string;
@@ -19,21 +28,15 @@ export const useUserManagement = () => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const checkAdminStatus = useCallback(async () => {
-    if (!user) {
-      setIsAdmin(false);
-      return false;
-    }
-
+    if (!user) { setIsAdmin(false); return false; }
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (error) throw error;
-      const adminStatus = !!data;
+      const q = query(
+        collection(db, 'user_roles'),
+        where('user_id', '==', user.uid),
+        where('role', '==', 'admin')
+      );
+      const snapshot = await getDocs(q);
+      const adminStatus = !snapshot.empty;
       setIsAdmin(adminStatus);
       return adminStatus;
     } catch (error) {
@@ -45,32 +48,23 @@ export const useUserManagement = () => {
 
   const fetchUsers = useCallback(async () => {
     if (!user) return;
-
     setLoading(true);
     try {
-      // Fetch all profiles (admin can see all via RLS)
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, email')
-        .order('email');
+      const profilesSnap = await getDocs(
+        query(collection(db, 'profiles'), orderBy('email'))
+      );
+      const rolesSnap = await getDocs(collection(db, 'user_roles'));
 
-      if (profilesError) throw profilesError;
+      const rolesData = rolesSnap.docs.map((d) => d.data() as { user_id: string; role: AppRole });
 
-      // Fetch all roles (admin can see all via RLS)
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) throw rolesError;
-
-      // Map profiles with their roles
-      const usersWithRoles: UserWithRoles[] = (profiles || []).map((profile) => ({
-        userId: profile.user_id,
-        email: profile.email,
-        roles: (roles || [])
-          .filter((r) => r.user_id === profile.user_id)
-          .map((r) => r.role),
-      }));
+      const usersWithRoles: UserWithRoles[] = profilesSnap.docs.map((d) => {
+        const profile = d.data() as { user_id: string; email: string };
+        return {
+          userId: profile.user_id,
+          email: profile.email,
+          roles: rolesData.filter((r) => r.user_id === profile.user_id).map((r) => r.role),
+        };
+      });
 
       setUsers(usersWithRoles);
     } catch (error) {
@@ -84,57 +78,28 @@ export const useUserManagement = () => {
   useEffect(() => {
     const init = async () => {
       const adminStatus = await checkAdminStatus();
-      if (adminStatus) {
-        await fetchUsers();
-      } else {
-        setLoading(false);
-      }
+      if (adminStatus) await fetchUsers();
+      else setLoading(false);
     };
     init();
   }, [checkAdminStatus, fetchUsers]);
 
   const assignRole = useCallback(async (userId: string, role: AppRole): Promise<boolean> => {
-    if (!user || !isAdmin) {
-      toast.error('Only admins can assign roles');
-      return false;
-    }
-
-    // Don't allow assigning admin role
-    if (role === 'admin') {
-      toast.error('Cannot assign admin role');
-      return false;
-    }
-
-    // Don't allow assigning user role (it's the default, not stored)
-    if (role === 'user') {
-      toast.error('User role is default and cannot be assigned');
-      return false;
-    }
+    if (!user || !isAdmin) { toast.error('Only admins can assign roles'); return false; }
+    if (role === 'admin') { toast.error('Cannot assign admin role'); return false; }
+    if (role === 'user') { toast.error('User role is default and cannot be assigned'); return false; }
 
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: role,
-        });
-
-      if (error) {
-        if (error.code === '23505') {
-          toast.error('User already has this role');
-          return false;
-        }
-        throw error;
-      }
-
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.userId === userId
-            ? { ...u, roles: [...u.roles, role] }
-            : u
-        )
+      // Check if role already exists
+      const existing = await getDocs(
+        query(collection(db, 'user_roles'), where('user_id', '==', userId), where('role', '==', role))
       );
+      if (!existing.empty) { toast.error('User already has this role'); return false; }
 
+      await addDoc(collection(db, 'user_roles'), { user_id: userId, role });
+      setUsers((prev) =>
+        prev.map((u) => u.userId === userId ? { ...u, roles: [...u.roles, role] } : u)
+      );
       toast.success('Role assigned successfully');
       return true;
     } catch (error) {
@@ -145,34 +110,21 @@ export const useUserManagement = () => {
   }, [user, isAdmin]);
 
   const removeRole = useCallback(async (userId: string, role: AppRole): Promise<boolean> => {
-    if (!user || !isAdmin) {
-      toast.error('Only admins can remove roles');
-      return false;
-    }
-
-    // Don't allow removing admin role
-    if (role === 'admin') {
-      toast.error('Cannot remove admin role');
-      return false;
-    }
+    if (!user || !isAdmin) { toast.error('Only admins can remove roles'); return false; }
+    if (role === 'admin') { toast.error('Cannot remove admin role'); return false; }
 
     try {
-      const { error } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', userId)
-        .eq('role', role);
-
-      if (error) throw error;
+      const q = query(
+        collection(db, 'user_roles'),
+        where('user_id', '==', userId),
+        where('role', '==', role)
+      );
+      const snapshot = await getDocs(q);
+      await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
 
       setUsers((prev) =>
-        prev.map((u) =>
-          u.userId === userId
-            ? { ...u, roles: u.roles.filter((r) => r !== role) }
-            : u
-        )
+        prev.map((u) => u.userId === userId ? { ...u, roles: u.roles.filter((r) => r !== role) } : u)
       );
-
       toast.success('Role removed successfully');
       return true;
     } catch (error) {
@@ -182,12 +134,5 @@ export const useUserManagement = () => {
     }
   }, [user, isAdmin]);
 
-  return {
-    users,
-    loading,
-    isAdmin,
-    assignRole,
-    removeRole,
-    refetch: fetchUsers,
-  };
+  return { users, loading, isAdmin, assignRole, removeRole, refetch: fetchUsers };
 };
