@@ -18,10 +18,11 @@ RouteTracker uses a comprehensive testing strategy with multiple layers of testi
 - **Unit Tests**: Testing individual functions and components in isolation
 - **Integration Tests**: Testing how different parts of the application work together
 - **End-to-End Tests**: Testing complete user workflows through the browser
+- **Performance Tests**: Benchmarking critical functions for performance regression
 
 ### Testing Stack
 
-- **Vitest**: Fast unit and integration test runner
+- **Vitest**: Fast unit and integration test runner with built-in benchmarking
 - **React Testing Library**: Component testing
 - **Playwright**: End-to-end browser testing
 - **@vitest/coverage-v8**: Code coverage reporting
@@ -62,6 +63,15 @@ E2E tests simulate real user interactions through the browser.
 **Examples**:
 - `auth.spec.ts` - Authentication flow tests
 
+### Performance Tests
+
+Performance benchmarks ensure critical functions remain fast and prevent performance regressions.
+
+**Location**: `src/test/*.bench.ts`
+
+**Examples**:
+- `performance.bench.ts` - Benchmarks for utility functions
+
 ## Running Tests
 
 ### Unit and Integration Tests
@@ -78,6 +88,13 @@ npm run test:coverage
 
 # Run tests with interactive UI
 npm run test:ui
+```
+
+### Performance Benchmarks
+
+```bash
+# Run performance benchmarks
+npm run test:bench
 ```
 
 ### End-to-End Tests
