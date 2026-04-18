@@ -20,12 +20,9 @@ const Index = () => {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        console.warn('No active user. Falling back to simulated route calculation.');
-        toast.success('Route calculated (Simulated): 12.5 miles');
-        return {
-          miles: 12.5,
-          routeUrl: `https://www.google.com/maps/dir/${encodeURIComponent(from)}/${encodeURIComponent(to)}`,
-        };
+        console.warn('No active user. Cannot calculate route.');
+        toast.error('You must be signed in to calculate routes.');
+        return null;
       }
 
       const token = await currentUser.getIdToken();
@@ -46,12 +43,18 @@ const Index = () => {
       console.log('Route response received:', { status: response.status });
 
       if (!response.ok) {
-        console.warn('Route API error. Falling back to simulated route.');
-        toast.success('Route calculated (Simulated fallback): 15.0 miles');
-        return {
-          miles: 15.0,
-          routeUrl: `https://www.google.com/maps/dir/${encodeURIComponent(from)}/${encodeURIComponent(to)}`,
-        };
+        let errorMessage = 'Route calculation failed.';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // Could not parse error body; use default message
+        }
+        console.error('Route API error:', { status: response.status, errorMessage });
+        toast.error(errorMessage);
+        return null;
       }
 
       const data = await response.json();
@@ -64,11 +67,8 @@ const Index = () => {
       };
     } catch (error) {
       console.error('Error calculating route:', error);
-      toast.success('Route calculated (Simulated fallback): 10.4 miles');
-      return {
-        miles: 10.4,
-        routeUrl: `https://www.google.com/maps/dir/${encodeURIComponent(from)}/${encodeURIComponent(to)}`,
-      };
+      toast.error('Failed to calculate route. Please try again.');
+      return null;
     }
   };
 
