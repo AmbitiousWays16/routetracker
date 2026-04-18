@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { render, waitFor } from "@testing-library/react";
-import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 
 // Mock AuthContext to avoid Firebase dependency
@@ -11,7 +11,6 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 // Re-implement TokenRedirectHandler inline for isolated testing of the redirect logic
 function TokenRedirectHandler({ children }: { children: React.ReactNode }) {
-  const { useNavigate, useLocation } = require("react-router-dom");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -36,19 +35,31 @@ function LocationDisplay() {
 }
 
 describe("TokenRedirectHandler", () => {
-  const originalSearch = window.location.search;
+  let originalLocation: Location;
+
+  beforeAll(() => {
+    originalLocation = window.location;
+  });
 
   afterEach(() => {
     Object.defineProperty(window, "location", {
       writable: true,
-      value: { ...window.location, search: originalSearch },
+      configurable: true,
+      value: originalLocation,
     });
   });
 
   function setSearch(search: string) {
+    const url = new URL(search ? `http://localhost/${search}` : "http://localhost/");
     Object.defineProperty(window, "location", {
       writable: true,
-      value: { ...window.location, search },
+      configurable: true,
+      value: {
+        ...originalLocation,
+        search: url.search,
+        href: url.href,
+        pathname: url.pathname,
+      },
     });
   }
 
