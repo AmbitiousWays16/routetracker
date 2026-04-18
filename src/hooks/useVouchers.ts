@@ -21,6 +21,7 @@ import {
   getStatusAfterApproval,
   ApproverRole,
 } from '@/types/voucher';
+import { sendVoucherNotification } from '@/lib/emailService';
 
 export const useVouchers = () => {
   const { user } = useAuth();
@@ -114,8 +115,8 @@ export const useVouchers = () => {
         rejection_reason: null,
       });
 
-      // TODO: Replace with Firebase Cloud Function email notification
-      console.log('Email notification stub — send-approval-email', {
+      // Send email notification to supervisor (fire-and-forget)
+      sendVoucherNotification({
         voucherId, action: 'submit', recipientEmail: supervisorEmail,
         employeeName, month, totalMiles,
       });
@@ -215,16 +216,16 @@ export const useApproverVouchers = () => {
         created_at: Timestamp.now(),
       });
 
-      // TODO: Replace with Firebase Cloud Function email notification
-      console.log('Email notification stub — approve', {
+      // Send email notification to next approver or employee (fire-and-forget)
+      sendVoucherNotification({
         voucherId: voucher.id, action: 'approve',
         recipientEmail: nextApproverEmail || employeeEmail,
         employeeName, month: monthDisplay,
-        totalMiles: voucher.total_miles, nextApproverRole: nextRole,
+        totalMiles: voucher.total_miles, nextApproverRole: nextRole ?? undefined,
       });
 
       if (isFinalApproval && accountantEmail) {
-        console.log('Email notification stub — final_approval', {
+        sendVoucherNotification({
           voucherId: voucher.id, action: 'final_approval',
           recipientEmail: accountantEmail, employeeName,
           month: monthDisplay, totalMiles: voucher.total_miles,
@@ -265,8 +266,8 @@ export const useApproverVouchers = () => {
         created_at: Timestamp.now(),
       });
 
-      // TODO: Replace with Firebase Cloud Function email notification
-      console.log('Email notification stub — reject', {
+      // Send email notification to employee (fire-and-forget)
+      sendVoucherNotification({
         voucherId: voucher.id, action: 'reject',
         recipientEmail: employeeEmail, employeeName,
         month: monthDisplay, totalMiles: voucher.total_miles, rejectionReason: reason,
