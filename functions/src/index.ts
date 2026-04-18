@@ -40,7 +40,7 @@ async function verifyToken(authHeader: string | undefined): Promise<admin.auth.D
 }
 
 // ─── 1. Google Maps Route ────────────────────────────────────────
-// Replaces: VITE_WORKER_URL/google-maps-route
+// Frontend env var: VITE_GOOGLE_MAPS_ROUTE_URL
 export const googleMapsRoute = onRequest(
   { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
   async (req, res) => {
@@ -106,7 +106,7 @@ export const googleMapsRoute = onRequest(
 );
 
 // ─── 2. Static Map Proxy ─────────────────────────────────────────
-// Replaces: VITE_WORKER_URL/static-map-proxy
+// Frontend env var: VITE_STATIC_MAP_PROXY_URL
 export const staticMapProxy = onRequest(
   { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
   async (req, res) => {
@@ -146,7 +146,7 @@ export const staticMapProxy = onRequest(
 );
 
 // ─── 3. Trip Purpose Suggestions (AI) ───────────────────────────
-// Replaces: VITE_WORKER_URL/trip-purpose-suggestions
+// Frontend env var: VITE_TRIP_PURPOSE_URL
 export const tripPurposeSuggestions = onRequest(
   { secrets: [OPENAI_API_KEY], cors: true },
   async (req, res) => {

@@ -52,9 +52,9 @@ describe('sendVoucherNotification', () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token-123');
     (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
 
-    // Set VITE_WORKER_URL for test
-    const originalEnv = import.meta.env.VITE_WORKER_URL;
-    import.meta.env.VITE_WORKER_URL = 'https://us-central1-test.cloudfunctions.net';
+    // Set VITE_SEND_VOUCHER_EMAIL_URL for test
+    const originalEnv = import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL;
+    import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL = 'https://us-central1-test.cloudfunctions.net/sendVoucherEmail';
 
     await sendVoucherNotification(basePayload);
 
@@ -71,7 +71,7 @@ describe('sendVoucherNotification', () => {
       })
     );
 
-    import.meta.env.VITE_WORKER_URL = originalEnv;
+    import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL = originalEnv;
   });
 
   it('should not throw on network failure', async () => {
@@ -79,7 +79,7 @@ describe('sendVoucherNotification', () => {
     (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
     fetchSpy.mockRejectedValue(new Error('Network error'));
 
-    import.meta.env.VITE_WORKER_URL = 'https://test.cloudfunctions.net';
+    import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL = 'https://test.cloudfunctions.net/sendVoucherEmail';
 
     // Should not throw
     await expect(sendVoucherNotification(basePayload)).resolves.toBeUndefined();
@@ -96,7 +96,7 @@ describe('sendVoucherNotification', () => {
       new Response(JSON.stringify({ error: 'Server error' }), { status: 502 })
     );
 
-    import.meta.env.VITE_WORKER_URL = 'https://test.cloudfunctions.net';
+    import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL = 'https://test.cloudfunctions.net/sendVoucherEmail';
 
     await expect(sendVoucherNotification(basePayload)).resolves.toBeUndefined();
     expect(console.error).toHaveBeenCalledWith(
@@ -110,7 +110,7 @@ describe('sendVoucherNotification', () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token');
     (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
 
-    import.meta.env.VITE_WORKER_URL = 'https://test.cloudfunctions.net';
+    import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL = 'https://test.cloudfunctions.net/sendVoucherEmail';
 
     const rejectPayload: VoucherEmailPayload = {
       ...basePayload,

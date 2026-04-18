@@ -31,7 +31,7 @@ describe('mapUtils', () => {
     originalFileReader = global.FileReader;
 
     // Mock environment variable
-    vi.stubEnv('VITE_WORKER_URL', 'https://worker.example.com');
+    vi.stubEnv('VITE_STATIC_MAP_PROXY_URL', 'https://worker.example.com/static-map-proxy');
   });
 
   afterEach(() => {

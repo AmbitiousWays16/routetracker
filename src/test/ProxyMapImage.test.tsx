@@ -46,8 +46,8 @@ beforeEach(() => {
     })
   );
 
-  // Mock VITE_WORKER_URL
-  vi.stubEnv("VITE_WORKER_URL", "https://example.com");
+  // Mock VITE_STATIC_MAP_PROXY_URL
+  vi.stubEnv("VITE_STATIC_MAP_PROXY_URL", "https://example.com/static-map-proxy");
 });
 
 afterEach(() => {

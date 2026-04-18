@@ -38,7 +38,7 @@ async function handleCalculateRoute(from: string, to: string) {
     const token = await currentUser.getIdToken();
 
     const response = await fetch(
-      `${import.meta.env?.VITE_WORKER_URL ?? ""}/google-maps-route`,
+      `${import.meta.env?.VITE_GOOGLE_MAPS_ROUTE_URL ?? ""}`,
       {
         method: "POST",
         headers: {
