@@ -11,6 +11,8 @@ vi.mock('@/lib/firebase', () => ({
 // Get reference to the mocked module so we can mutate it per test
 import { auth } from '@/lib/firebase';
 
+type MutableAuth = { currentUser: { getIdToken: () => Promise<string> } | null };
+
 describe('sendVoucherNotification', () => {
   const basePayload: VoucherEmailPayload = {
     action: 'submit',
@@ -36,7 +38,7 @@ describe('sendVoucherNotification', () => {
   });
 
   it('should skip email when no user is authenticated', async () => {
-    (auth as any).currentUser = null;
+    (auth as unknown as MutableAuth).currentUser = null;
 
     await sendVoucherNotification(basePayload);
 
@@ -48,7 +50,7 @@ describe('sendVoucherNotification', () => {
 
   it('should call cloud function with correct payload when user is authenticated', async () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token-123');
-    (auth as any).currentUser = { getIdToken: mockGetIdToken };
+    (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
 
     // Set VITE_WORKER_URL for test
     const originalEnv = import.meta.env.VITE_WORKER_URL;
@@ -74,7 +76,7 @@ describe('sendVoucherNotification', () => {
 
   it('should not throw on network failure', async () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token');
-    (auth as any).currentUser = { getIdToken: mockGetIdToken };
+    (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
     fetchSpy.mockRejectedValue(new Error('Network error'));
 
     import.meta.env.VITE_WORKER_URL = 'https://test.cloudfunctions.net';
@@ -89,7 +91,7 @@ describe('sendVoucherNotification', () => {
 
   it('should log error on non-OK response but not throw', async () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token');
-    (auth as any).currentUser = { getIdToken: mockGetIdToken };
+    (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
     fetchSpy.mockResolvedValue(
       new Response(JSON.stringify({ error: 'Server error' }), { status: 502 })
     );
@@ -106,7 +108,7 @@ describe('sendVoucherNotification', () => {
 
   it('should send correct payload for reject action with rejection reason', async () => {
     const mockGetIdToken = vi.fn().mockResolvedValue('mock-token');
-    (auth as any).currentUser = { getIdToken: mockGetIdToken };
+    (auth as unknown as MutableAuth).currentUser = { getIdToken: mockGetIdToken };
 
     import.meta.env.VITE_WORKER_URL = 'https://test.cloudfunctions.net';
 

@@ -5,6 +5,25 @@ import fetch from 'node-fetch';
 
 admin.initializeApp();
 
+// ─── Response types ──────────────────────────────────────────────
+type GoogleGeocodeResponse =
+  | { status: 'OK'; results: Array<{ geometry: { location: { lat: number; lng: number } } }> }
+  | { status: string; results?: unknown };
+
+type GoogleDirectionsResponse =
+  | {
+      status: 'OK';
+      routes: Array<{
+        legs: Array<{ distance: { value: number } }>;
+        overview_polyline: { points: string };
+      }>;
+    }
+  | { status: string; routes?: unknown };
+
+type OpenAIChatResponse = {
+  choices?: Array<{ message?: { content?: string } }>;
+};
+
 const GOOGLE_MAPS_API_KEY = defineSecret('GOOGLE_MAPS_API_KEY');
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 const SENDGRID_API_KEY = defineSecret('SENDGRID_API_KEY');
@@ -40,7 +59,7 @@ export const googleMapsRoute = onRequest(
     const geocode = async (address: string) => {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
       const r = await fetch(url);
-      const data = await r.json() as any;
+      const data = (await r.json()) as GoogleGeocodeResponse;
       if (data.status !== 'OK') throw new Error(`Geocode failed for: ${address}`);
       return data.results[0].geometry.location as { lat: number; lng: number };
     };
@@ -56,7 +75,7 @@ export const googleMapsRoute = onRequest(
         `&mode=driving&key=${apiKey}`;
 
       const dirRes = await fetch(directionsUrl);
-      const dirData = await dirRes.json() as any;
+      const dirData = (await dirRes.json()) as GoogleDirectionsResponse;
 
       if (dirData.status !== 'OK') {
         res.status(422).json({ error: 'Could not calculate route', details: dirData.status });
@@ -79,9 +98,9 @@ export const googleMapsRoute = onRequest(
           endLng: destination.lng,
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('googleMapsRoute error:', err);
-      res.status(500).json({ error: err.message || 'Internal server error' });
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
     }
   }
 );
@@ -119,7 +138,7 @@ export const staticMapProxy = onRequest(
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=3600');
       res.send(buffer);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('staticMapProxy error:', err);
       res.status(500).send('Internal server error');
     }
@@ -164,7 +183,7 @@ export const tripPurposeSuggestions = onRequest(
         }),
       });
 
-      const aiData = await aiRes.json() as any;
+      const aiData = (await aiRes.json()) as OpenAIChatResponse;
       const suggestion = aiData?.choices?.[0]?.message?.content?.trim();
 
       if (!suggestion) {
@@ -173,9 +192,9 @@ export const tripPurposeSuggestions = onRequest(
       }
 
       res.json({ suggestion });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('tripPurposeSuggestions error:', err);
-      res.status(500).json({ error: err.message || 'Internal server error' });
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
     }
   }
 );
@@ -291,9 +310,9 @@ export const sendVoucherEmail = onRequest(
       }
 
       res.json({ success: true });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('sendVoucherEmail error:', err);
-      res.status(500).json({ error: err.message || 'Internal server error' });
+      res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
     }
   }
 );
