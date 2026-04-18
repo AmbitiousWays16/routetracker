@@ -28,6 +28,36 @@ npm i
 npm run dev
 ```
 
+## Testing
+
+This project has a comprehensive testing suite. See [TESTING.md](./TESTING.md) for detailed testing documentation.
+
+### Quick Start
+
+```sh
+# Run all tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run E2E tests
+npm run test:e2e
+```
+
+### Test Coverage
+
+The project maintains **>80% code coverage** on core business logic (lib/ directory).
+
+Current test types:
+- **Unit Tests**: Testing individual functions (utils, emailService, mapUtils)
+- **Component Tests**: Testing React components (ProxyMapImage, TokenRedirectHandler)
+- **Integration Tests**: Testing feature flows (route calculation, authentication)
+- **E2E Tests**: Testing complete user workflows with Playwright
+
 ## How can I deploy this project?
 
 You can deploy this project to any static hosting provider. You will need to build the project first.
@@ -37,3 +67,4 @@ npm run build
 ```
 
 This will create a `dist` folder with the production-ready files. You can then upload this folder to your hosting provider.
+
