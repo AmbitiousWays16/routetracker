@@ -64,7 +64,12 @@ const Auth = () => {
     setIsSubmitting(true);
     try {
       const currentUser = auth.currentUser;
-      if (!currentUser) { toast.error('No authenticated user found. Please use the reset link again.'); return; }
+      if (!currentUser) {
+        toast.error('Session expired. Please use the reset link again.');
+        setIsSettingPassword(false);
+        navigate('/auth');
+        return;
+      }
       await updatePassword(currentUser, password);
       toast.success('Password set successfully! You are now signed in.');
       setIsSettingPassword(false);
