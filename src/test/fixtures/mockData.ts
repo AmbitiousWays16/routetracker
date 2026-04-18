@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Trip, RouteMapData } from '@/types/mileage';
 import { MileageVoucherRecord, VoucherStatus } from '@/types/voucher';
 import { User } from 'firebase/auth';
