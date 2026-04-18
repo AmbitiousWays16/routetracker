@@ -34,8 +34,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       return { error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Sign up failed') };
+    } catch (error: any) {
+      console.error('Auth error code:', error.code)
+      console.error('Auth error message:', error.message)
+      return { error: error instanceof Error ? error : new Error('Sign up failed') };
     }
   };
 
@@ -43,8 +45,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       return { error: null };
-    } catch (err) {
-      return { error: err instanceof Error ? err : new Error('Sign in failed') };
+    } catch (error: any) {
+      console.error('Auth error code:', error.code)
+      console.error('Auth error message:', error.message)
+      return { error: error instanceof Error ? error : new Error('Sign in failed') };
     }
   };
 
