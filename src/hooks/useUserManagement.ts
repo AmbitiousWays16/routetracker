@@ -55,7 +55,9 @@ export const useUserManagement = () => {
         query(collection(db, 'profiles'), orderBy('email'))
       );
 
-      const userIds = profilesSnap.docs.map((d) => (d.data() as { user_id: string }).user_id);
+      const userIds = profilesSnap.docs
+        .map((d) => (d.data() as { user_id: string }).user_id)
+        .filter(Boolean);
 
       // Fetch roles in batches of 30 (Firestore 'in' clause limit)
       const rolesData: { user_id: string; role: AppRole }[] = [];
