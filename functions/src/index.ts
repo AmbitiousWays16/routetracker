@@ -7,6 +7,8 @@ admin.initializeApp();
 
 const GOOGLE_MAPS_API_KEY = defineSecret('GOOGLE_MAPS_API_KEY');
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+const SENDGRID_API_KEY = defineSecret('SENDGRID_API_KEY');
+const SENDGRID_FROM_EMAIL = defineSecret('SENDGRID_FROM_EMAIL');
 
 // ─── Auth helper ────────────────────────────────────────────────
 async function verifyToken(authHeader: string | undefined): Promise<admin.auth.DecodedIdToken | null> {
@@ -173,6 +175,124 @@ export const tripPurposeSuggestions = onRequest(
       res.json({ suggestion });
     } catch (err: any) {
       console.error('tripPurposeSuggestions error:', err);
+      res.status(500).json({ error: err.message || 'Internal server error' });
+    }
+  }
+);
+
+// ─── 4. Voucher Email Notifications ─────────────────────────────
+interface EmailPayload {
+  action: 'submit' | 'approve' | 'reject' | 'final_approval';
+  recipientEmail: string;
+  employeeName: string;
+  month: string;
+  totalMiles: number;
+  voucherId: string;
+  nextApproverRole?: string;
+  rejectionReason?: string;
+}
+
+function buildEmailContent(payload: EmailPayload): { subject: string; html: string } {
+  const { action, employeeName, month, totalMiles, nextApproverRole, rejectionReason } = payload;
+
+  switch (action) {
+    case 'submit':
+      return {
+        subject: `Mileage Voucher Pending Approval – ${employeeName} (${month})`,
+        html: [
+          `<h2>Mileage Voucher Submitted for Approval</h2>`,
+          `<p><strong>${employeeName}</strong> has submitted a mileage voucher for <strong>${month}</strong> ` +
+            `totaling <strong>${totalMiles} miles</strong>.</p>`,
+          `<p>Please log in to the RouteTracker app to review and approve or return this voucher.</p>`,
+        ].join('\n'),
+      };
+
+    case 'approve':
+      return {
+        subject: `Mileage Voucher Approved – ${employeeName} (${month})`,
+        html: [
+          `<h2>Mileage Voucher Approved</h2>`,
+          `<p>The mileage voucher for <strong>${employeeName}</strong> for <strong>${month}</strong> ` +
+            `totaling <strong>${totalMiles} miles</strong> has been approved at this level.</p>`,
+          nextApproverRole
+            ? `<p>The voucher has been forwarded to the <strong>${nextApproverRole}</strong> for further review.</p>`
+            : `<p>No further approval is required at this stage.</p>`,
+          `<p>Please log in to the RouteTracker app to review.</p>`,
+        ].join('\n'),
+      };
+
+    case 'reject':
+      return {
+        subject: `Mileage Voucher Returned – ${month}`,
+        html: [
+          `<h2>Mileage Voucher Returned for Corrections</h2>`,
+          `<p>Your mileage voucher for <strong>${month}</strong> totaling <strong>${totalMiles} miles</strong> ` +
+            `has been returned for corrections.</p>`,
+          rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : '',
+          `<p>Please log in to the RouteTracker app to make corrections and resubmit.</p>`,
+        ].join('\n'),
+      };
+
+    case 'final_approval':
+      return {
+        subject: `Mileage Voucher Final Approval – ${employeeName} (${month})`,
+        html: [
+          `<h2>Mileage Voucher Received Final Approval</h2>`,
+          `<p>The mileage voucher for <strong>${employeeName}</strong> for <strong>${month}</strong> ` +
+            `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
+          `<p>Please log in to the RouteTracker app to process the reimbursement.</p>`,
+        ].join('\n'),
+      };
+
+    default:
+      return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' };
+  }
+}
+
+export const sendVoucherEmail = onRequest(
+  { secrets: [SENDGRID_API_KEY, SENDGRID_FROM_EMAIL], cors: true },
+  async (req, res) => {
+    const user = await verifyToken(req.headers.authorization);
+    if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+    if (req.method !== 'POST') {
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
+    const payload = req.body as EmailPayload;
+    if (!payload.action || !payload.recipientEmail || !payload.employeeName || !payload.month || !payload.voucherId) {
+      res.status(400).json({ error: 'Missing required fields: action, recipientEmail, employeeName, month, voucherId' });
+      return;
+    }
+
+    const { subject, html } = buildEmailContent(payload);
+
+    try {
+      const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SENDGRID_API_KEY.value()}`,
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: payload.recipientEmail }] }],
+          from: { email: SENDGRID_FROM_EMAIL.value() },
+          subject,
+          content: [{ type: 'text/html', value: html }],
+        }),
+      });
+
+      if (!sgRes.ok) {
+        const errorBody = await sgRes.text();
+        console.error('SendGrid error:', sgRes.status, errorBody);
+        res.status(502).json({ error: 'Failed to send email via SendGrid' });
+        return;
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error('sendVoucherEmail error:', err);
       res.status(500).json({ error: err.message || 'Internal server error' });
     }
   }
