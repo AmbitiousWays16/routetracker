@@ -3,7 +3,7 @@ import { createMockUser, createMockRouteMapData } from './fixtures/mockData';
 
 // Mock Firebase auth module
 const mockAuth = {
-  currentUser: null as any,
+  currentUser: null as ReturnType<typeof createMockUser> | null,
 };
 
 vi.mock('@/lib/firebase', () => ({
@@ -60,17 +60,18 @@ describe('mapUtils', () => {
 
       // Mock FileReader
       const mockFileReader = {
-        readAsDataURL: vi.fn(function(this: any) {
+        readAsDataURL: vi.fn(function(this: { result: string | ArrayBuffer | null; onloadend: ((ev: ProgressEvent<FileReader>) => void) | null }) {
           // Simulate async FileReader behavior
           setTimeout(() => {
             this.result = 'data:image/png;base64,dGVzdC1pbWFnZS1kYXRh';
             if (this.onloadend) this.onloadend({} as ProgressEvent<FileReader>);
           }, 0);
         }),
-        onloadend: null as any,
+        onloadend: null as ((ev: ProgressEvent<FileReader>) => void) | null,
         result: null as string | ArrayBuffer | null,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       global.FileReader = vi.fn(() => mockFileReader) as any;
 
       const routeMapData = createMockRouteMapData();
@@ -92,16 +93,17 @@ describe('mapUtils', () => {
       );
 
       const mockFileReader = {
-        readAsDataURL: vi.fn(function(this: any) {
+        readAsDataURL: vi.fn(function(this: { result: string | ArrayBuffer | null; onloadend: ((ev: ProgressEvent<FileReader>) => void) | null }) {
           setTimeout(() => {
             this.result = 'data:image/png;base64,test';
             if (this.onloadend) this.onloadend({} as ProgressEvent<FileReader>);
           }, 0);
         }),
-        onloadend: null as any,
+        onloadend: null as ((ev: ProgressEvent<FileReader>) => void) | null,
         result: null as string | ArrayBuffer | null,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       global.FileReader = vi.fn(() => mockFileReader) as any;
 
       const routeMapData = createMockRouteMapData({
@@ -163,16 +165,17 @@ describe('mapUtils', () => {
       );
 
       const mockFileReader = {
-        readAsDataURL: vi.fn(function(this: any) {
+        readAsDataURL: vi.fn(function(this: { result: string | ArrayBuffer | null; onloadend: ((ev: ProgressEvent<FileReader>) => void) | null }) {
           setTimeout(() => {
             this.result = 'data:image/png;base64,test';
             if (this.onloadend) this.onloadend({} as ProgressEvent<FileReader>);
           }, 0);
         }),
-        onloadend: null as any,
+        onloadend: null as ((ev: ProgressEvent<FileReader>) => void) | null,
         result: null as string | ArrayBuffer | null,
       };
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       global.FileReader = vi.fn(() => mockFileReader) as any;
 
       const routeMapData = createMockRouteMapData();

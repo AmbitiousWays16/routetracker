@@ -188,10 +188,10 @@ const mockTrip = createMockTrip({ miles: 50 });
 
 ### Current Coverage Targets
 
-- **Lines**: 60%
-- **Functions**: 60%
-- **Branches**: 50%
-- **Statements**: 60%
+- **Lines**: 80%
+- **Functions**: 80%
+- **Branches**: 80%
+- **Statements**: 80%
 
 ### Generating Coverage Reports
 

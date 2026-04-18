@@ -44,10 +44,13 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-    - name: Generate coverage badge
+    - name: Upload coverage artifacts
       if: github.ref == 'refs/heads/main'
-      run: |
-        echo "Coverage reports generated successfully"
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/
+        retention-days: 30
 
     - name: Comment PR with coverage
       if: github.event_name == 'pull_request'
@@ -58,16 +61,7 @@ jobs:
           if (fs.existsSync('./coverage/coverage-summary.json')) {
             const coverage = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
             const total = coverage.total;
-            const comment = `## Test Coverage Report
-
-            | Metric | Coverage |
-            |--------|----------|
-            | Lines | ${total.lines.pct}% |
-            | Statements | ${total.statements.pct}% |
-            | Functions | ${total.functions.pct}% |
-            | Branches | ${total.branches.pct}% |
-
-            ${total.lines.pct >= 80 ? '✅' : '⚠️'} Coverage threshold: 80%`;
+            const comment = `## Test Coverage Report\n\n| Metric | Coverage |\n|--------|----------|\n| Lines | ${total.lines.pct}% |\n| Statements | ${total.statements.pct}% |\n| Functions | ${total.functions.pct}% |\n| Branches | ${total.branches.pct}% |\n\n${total.lines.pct >= 80 ? '✅' : '⚠️'} Coverage threshold: 80%`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
