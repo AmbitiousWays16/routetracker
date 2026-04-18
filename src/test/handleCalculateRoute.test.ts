@@ -7,9 +7,10 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock firebase auth
-const mockAuth = { currentUser: null as any };
+type MockUser = { getIdToken: () => Promise<string> };
+const mockAuth: { currentUser: MockUser | null } = { currentUser: null };
 vi.mock("@/lib/firebase", () => ({
-  auth: new Proxy({}, { get: (_, prop) => (mockAuth as any)[prop] }),
+  auth: new Proxy({}, { get: (_, prop) => mockAuth[prop as keyof typeof mockAuth] }),
 }));
 
 // Import after mocks are set up
@@ -37,7 +38,7 @@ async function handleCalculateRoute(from: string, to: string) {
     const token = await currentUser.getIdToken();
 
     const response = await fetch(
-      `${(import.meta as any).env?.VITE_WORKER_URL ?? ""}/google-maps-route`,
+      `${import.meta.env?.VITE_WORKER_URL ?? ""}/google-maps-route`,
       {
         method: "POST",
         headers: {
