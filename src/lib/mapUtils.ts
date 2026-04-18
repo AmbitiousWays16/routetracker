@@ -11,7 +11,7 @@ export const fetchMapImageAsBase64 = async (routeMapData: RouteMapData): Promise
     const token = await currentUser.getIdToken();
 
     const proxyUrl = new URL(
-      `${import.meta.env.VITE_WORKER_URL}/static-map-proxy`
+      import.meta.env.VITE_STATIC_MAP_PROXY_URL
     );
     proxyUrl.searchParams.set('polyline', routeMapData.encodedPolyline);
     proxyUrl.searchParams.set('startLat', String(routeMapData.startLat));

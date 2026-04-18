@@ -94,7 +94,10 @@ The `.env` file requires the following variables (see `.env.example` for details
 | `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase messaging sender ID |
 | `VITE_FIREBASE_APP_ID` | Firebase app ID |
 | `VITE_FIREBASE_GOOGLE_MAPS_API_KEY` | Google Maps API key (client-side, for embedding) |
-| `VITE_WORKER_URL` | Cloud Functions base URL, e.g. `https://us-central1-your-project.cloudfunctions.net` |
+| `VITE_GOOGLE_MAPS_ROUTE_URL` | URL for the `googleMapsRoute` Cloud Function |
+| `VITE_TRIP_PURPOSE_URL` | URL for the `tripPurposeSuggestions` Cloud Function |
+| `VITE_STATIC_MAP_PROXY_URL` | URL for the `staticMapProxy` Cloud Function |
+| `VITE_SEND_VOUCHER_EMAIL_URL` | URL for the `sendVoucherEmail` Cloud Function |
 
 > **Note:** Never commit the `.env` file. It is already listed in `.gitignore`.
 

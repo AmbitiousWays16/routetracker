@@ -26,7 +26,7 @@ export async function sendVoucherNotification(payload: VoucherEmailPayload): Pro
 
     const token = await currentUser.getIdToken();
     const response = await fetch(
-      `${import.meta.env.VITE_WORKER_URL}/sendVoucherEmail`,
+      import.meta.env.VITE_SEND_VOUCHER_EMAIL_URL,
       {
         method: 'POST',
         headers: {

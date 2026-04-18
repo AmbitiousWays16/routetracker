@@ -60,7 +60,7 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
       const token = await currentUser.getIdToken();
 
       const response = await fetch(
-        `${import.meta.env.VITE_WORKER_URL}/trip-purpose-suggestions`,
+        import.meta.env.VITE_TRIP_PURPOSE_URL,
         {
           method: 'POST',
           headers: {
