@@ -25,7 +25,7 @@ export const ProxyMapImage = ({
     let isMounted = true;
 
     const fetchMapImage = async () => {
-      if (!routeMapData?.encodedPolyline) {
+      if (!routeMapData?.encodedPolyline || routeMapData.startLat == null || routeMapData.startLng == null || routeMapData.endLat == null || routeMapData.endLng == null) {
         setLoading(false);
         return;
       }

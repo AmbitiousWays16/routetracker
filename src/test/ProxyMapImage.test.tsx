@@ -219,10 +219,10 @@ describe("ProxyMapImage", () => {
     mockFetchSuccess();
     const fetchSpy = vi.mocked(globalThis.fetch);
 
+    // Pass an object missing encodedPolyline to test the guard check
+    const incompleteData = { startLat: 36.1, startLng: -115.1, endLat: 36.2, endLng: -115.2 } as RouteMapData;
     render(
-      <ProxyMapImage
-        routeMapData={undefined as unknown as RouteMapData}
-      />
+      <ProxyMapImage routeMapData={incompleteData} />
     );
 
     // Should show "Map unavailable" without fetching
