@@ -126,16 +126,14 @@ export const useTrips = () => {
         createdAt: new Date(),
       };
 
-      if (isCurrentMonth) {
-        setTrips((prev) => [newTrip, ...prev]);
-      }
+      setTrips((prev) => [newTrip, ...prev].sort((a, b) => a.date.localeCompare(b.date)));
       return newTrip;
     } catch (error) {
       console.error('Error adding trip:', error);
       toast.error('Failed to add trip');
       return null;
     }
-  }, [user, isCurrentMonth]);
+  }, [user]);
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
