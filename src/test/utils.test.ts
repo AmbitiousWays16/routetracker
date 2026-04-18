@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { chunk } from "@/lib/utils";
+import { chunk, cn } from "@/lib/utils";
 
 describe("chunk", () => {
   it("should split an array into chunks of the given size", () => {
@@ -29,3 +29,26 @@ describe("chunk", () => {
     expect(result.flat()).toEqual(ids);
   });
 });
+
+describe("cn", () => {
+  it("should merge class names", () => {
+    const result = cn("foo", "bar");
+    expect(result).toContain("foo");
+    expect(result).toContain("bar");
+  });
+
+  it("should handle conditional classes", () => {
+    const result = cn("foo", false && "bar", "baz");
+    expect(result).toContain("foo");
+    expect(result).toContain("baz");
+    expect(result).not.toContain("bar");
+  });
+
+  it("should merge tailwind classes correctly", () => {
+    const result = cn("px-2 py-1", "px-4");
+    // twMerge should keep only px-4 (later value wins)
+    expect(result).toContain("px-4");
+    expect(result).toContain("py-1");
+  });
+});
+
