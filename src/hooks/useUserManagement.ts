@@ -11,6 +11,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { chunk } from '@/lib/utils';
 
 // Local type replacing Supabase Database enum
 export type AppRole = 'admin' | 'supervisor' | 'vp' | 'coo' | 'user';
@@ -53,9 +54,19 @@ export const useUserManagement = () => {
       const profilesSnap = await getDocs(
         query(collection(db, 'profiles'), orderBy('email'))
       );
-      const rolesSnap = await getDocs(collection(db, 'user_roles'));
 
-      const rolesData = rolesSnap.docs.map((d) => d.data() as { user_id: string; role: AppRole });
+      const userIds = profilesSnap.docs.map((d) => (d.data() as { user_id: string }).user_id);
+
+      // Fetch roles in batches of 30 (Firestore 'in' clause limit)
+      const rolesData: { user_id: string; role: AppRole }[] = [];
+      for (const batch of chunk(userIds, 30)) {
+        const rolesSnap = await getDocs(
+          query(collection(db, 'user_roles'), where('user_id', 'in', batch))
+        );
+        rolesSnap.docs.forEach((d) =>
+          rolesData.push(d.data() as { user_id: string; role: AppRole })
+        );
+      }
 
       const usersWithRoles: UserWithRoles[] = profilesSnap.docs.map((d) => {
         const profile = d.data() as { user_id: string; email: string };
