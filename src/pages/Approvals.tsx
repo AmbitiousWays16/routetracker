@@ -26,6 +26,7 @@ export default function Approvals() {
   const { pendingVouchers, loading, approverRole, approveVoucher, rejectVoucher } = useApproverVouchers();
   const [selectedVoucher, setSelectedVoucher] = useState<MileageVoucherRecord | null>(null);
   const [employeeEmail, setEmployeeEmail] = useState('');
+  const [employeeName, setEmployeeName] = useState('');
   const [nextApproverEmail, setNextApproverEmail] = useState('');
   const [accountantEmail, setAccountantEmail] = useState('');
   const [rejectReason, setRejectReason] = useState('');
@@ -36,21 +37,25 @@ export default function Approvals() {
   const [nextEmailError, setNextEmailError] = useState('');
   const [accountantEmailError, setAccountantEmailError] = useState('');
 
-  const fetchEmployeeEmail = async (userId: string): Promise<string> => {
+  const fetchEmployeeProfile = async (userId: string): Promise<{ email: string; name: string }> => {
     try {
       const q = query(collection(db, 'profiles'), where('user_id', '==', userId));
       const snapshot = await getDocs(q);
-      if (!snapshot.empty) return snapshot.docs[0].data().email || '';
-      return '';
+      if (!snapshot.empty) {
+        const data = snapshot.docs[0].data();
+        return { email: data.email || '', name: data.full_name || '' };
+      }
+      return { email: '', name: '' };
     } catch {
-      return '';
+      return { email: '', name: '' };
     }
   };
 
   const handleApproveClick = async (voucher: MileageVoucherRecord) => {
     setSelectedVoucher(voucher);
-    const email = await fetchEmployeeEmail(voucher.user_id);
-    setEmployeeEmail(email);
+    const profile = await fetchEmployeeProfile(voucher.user_id);
+    setEmployeeEmail(profile.email);
+    setEmployeeName(profile.name);
     setNextApproverEmail('');
     setAccountantEmail('');
     setEmailError('');
@@ -61,8 +66,9 @@ export default function Approvals() {
 
   const handleRejectClick = async (voucher: MileageVoucherRecord) => {
     setSelectedVoucher(voucher);
-    const email = await fetchEmployeeEmail(voucher.user_id);
-    setEmployeeEmail(email);
+    const profile = await fetchEmployeeProfile(voucher.user_id);
+    setEmployeeEmail(profile.email);
+    setEmployeeName(profile.name);
     setRejectReason('');
     setEmailError('');
     setShowRejectDialog(true);
@@ -88,7 +94,7 @@ export default function Approvals() {
 
     setProcessing(true);
     try {
-      await approveVoucher(selectedVoucher, employeeEmail.trim(), employeeEmail.trim(), nextApproverEmail.trim() || undefined, accountantEmail.trim() || undefined);
+      await approveVoucher(selectedVoucher, employeeEmail.trim(), employeeName.trim(), nextApproverEmail.trim() || undefined, accountantEmail.trim() || undefined);
       setShowApproveDialog(false);
     } finally {
       setProcessing(false);
@@ -102,7 +108,7 @@ export default function Approvals() {
 
     setProcessing(true);
     try {
-      await rejectVoucher(selectedVoucher, employeeEmail.trim(), employeeEmail.trim(), rejectReason.trim());
+      await rejectVoucher(selectedVoucher, employeeEmail.trim(), employeeName.trim(), rejectReason.trim());
       setShowRejectDialog(false);
     } finally {
       setProcessing(false);
