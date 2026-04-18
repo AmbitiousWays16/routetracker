@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth } from '@/lib/firebase';
 import { Loader2, MapPin } from 'lucide-react';
 import { RouteMapData } from '@/types/mileage';
@@ -19,13 +19,13 @@ export const ProxyMapImage = ({
   const [imageSrc, setImageSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const objectUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    let objectUrl: string | null = null;
 
     const fetchMapImage = async () => {
-      if (!routeMapData) {
+      if (!routeMapData?.encodedPolyline || routeMapData.startLat == null || routeMapData.startLng == null || routeMapData.endLat == null || routeMapData.endLng == null) {
         setLoading(false);
         return;
       }
@@ -62,11 +62,19 @@ export const ProxyMapImage = ({
         if (!response.ok) throw new Error(`Failed to fetch map: ${response.status}`);
 
         const blob = await response.blob();
-        objectUrl = URL.createObjectURL(blob);
+        const newObjectUrl = URL.createObjectURL(blob);
 
         if (isMounted) {
-          setImageSrc(objectUrl);
+          // Revoke the previous object URL before setting the new one
+          if (objectUrlRef.current) {
+            URL.revokeObjectURL(objectUrlRef.current);
+          }
+          objectUrlRef.current = newObjectUrl;
+          setImageSrc(newObjectUrl);
           setLoading(false);
+        } else {
+          // Component unmounted during fetch, clean up immediately
+          URL.revokeObjectURL(newObjectUrl);
         }
       } catch (err) {
         console.error('Error fetching map image:', err);
@@ -81,9 +89,18 @@ export const ProxyMapImage = ({
 
     return () => {
       isMounted = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [routeMapData]);
+  }, [routeMapData?.encodedPolyline, routeMapData?.startLat, routeMapData?.startLng, routeMapData?.endLat, routeMapData?.endLng]);
+
+  // Clean up the object URL on unmount
+  useEffect(() => {
+    return () => {
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current);
+        objectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
