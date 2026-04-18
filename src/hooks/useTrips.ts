@@ -126,16 +126,14 @@ export const useTrips = () => {
         createdAt: new Date(),
       };
 
-      if (isCurrentMonth) {
-        setTrips((prev) => [newTrip, ...prev]);
-      }
+      setTrips((prev) => [newTrip, ...prev].sort((a, b) => a.date.localeCompare(b.date)));
       return newTrip;
     } catch (error) {
       console.error('Error adding trip:', error);
       toast.error('Failed to add trip');
       return null;
     }
-  }, [user, isCurrentMonth]);
+  }, [user]);
 
   const deleteTrip = useCallback(async (id: string) => {
     if (!user) return;
@@ -176,16 +174,23 @@ export const useTrips = () => {
   const clearTrips = useCallback(async () => {
     if (!user) return;
     try {
-      const q = query(collection(db, 'trips'), where('user_id', '==', user.uid));
+      const monthStart = format(startOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(selectedMonth), 'yyyy-MM-dd');
+      const q = query(
+        collection(db, 'trips'),
+        where('user_id', '==', user.uid),
+        where('date', '>=', monthStart),
+        where('date', '<=', monthEnd)
+      );
       const snapshot = await getDocs(q);
       await Promise.all(snapshot.docs.map((d) => deleteDoc(d.ref)));
       setTrips([]);
-      toast.success('All trips cleared');
+      toast.success(`All trips for ${format(selectedMonth, 'MMMM yyyy')} cleared`);
     } catch (error) {
       console.error('Error clearing trips:', error);
       toast.error('Failed to clear trips');
     }
-  }, [user]);
+  }, [user, selectedMonth]);
 
   const totalMiles = trips.reduce((sum, t) => sum + t.miles, 0);
 

@@ -43,7 +43,10 @@ export default function Approvals() {
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
         const data = snapshot.docs[0].data();
-        return { email: data.email || '', name: data.full_name || '' };
+        return {
+          email: data.email || '',
+          name: data.full_name || '',
+        };
       }
       return { email: '', name: '' };
     } catch {
