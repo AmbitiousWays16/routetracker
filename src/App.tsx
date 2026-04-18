@@ -14,23 +14,16 @@ import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
 
-// Component to handle invite/recovery token redirects
+// Component to handle Firebase Auth redirect links (e.g. password reset, sign-in)
 const TokenRedirectHandler = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Check URL hash for invite or recovery tokens
-    const hash = window.location.hash;
-    if (hash) {
-      const hashParams = new URLSearchParams(hash.substring(1));
-      const type = hashParams.get('type');
-      const accessToken = hashParams.get('access_token');
-      
-      // If this is an invite or recovery link, redirect to /auth with the hash preserved
-      if ((type === 'invite' || type === 'recovery') && accessToken && location.pathname !== '/auth') {
-        navigate('/auth' + hash, { replace: true });
-      }
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    if ((mode === 'resetPassword' || mode === 'signIn') && location.pathname !== '/auth') {
+      navigate('/auth' + window.location.search, { replace: true });
     }
   }, [navigate, location.pathname]);
 
