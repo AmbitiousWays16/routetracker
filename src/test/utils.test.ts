@@ -38,8 +38,8 @@ describe("cn", () => {
   });
 
   it("should handle conditional classes", () => {
-    const isActive = false;
-    const result = cn("foo", isActive && "bar", "baz");
+    const includeBar = false;
+    const result = cn("foo", includeBar && "bar", "baz");
     expect(result).toContain("foo");
     expect(result).toContain("baz");
     expect(result).not.toContain("bar");
@@ -52,4 +52,3 @@ describe("cn", () => {
     expect(result).toContain("py-1");
   });
 });
-

@@ -7,11 +7,10 @@ vi.mock("sonner", () => ({
 }));
 
 // Mock firebase auth
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const mockAuth: { currentUser: any } = { currentUser: null };
+type MockUser = { getIdToken: () => Promise<string> };
+const mockAuth: { currentUser: MockUser | null } = { currentUser: null };
 vi.mock("@/lib/firebase", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  auth: new Proxy({}, { get: (_, prop) => (mockAuth as Record<string, any>)[prop as string] }),
+  auth: new Proxy({}, { get: (_, prop) => mockAuth[prop as keyof typeof mockAuth] }),
 }));
 
 // Import after mocks are set up
@@ -39,7 +38,7 @@ async function handleCalculateRoute(from: string, to: string) {
     const token = await currentUser.getIdToken();
 
     const response = await fetch(
-      `${(import.meta as unknown as { env?: { VITE_WORKER_URL?: string } }).env?.VITE_WORKER_URL ?? ""}/google-maps-route`,
+      `${import.meta.env?.VITE_WORKER_URL ?? ""}/google-maps-route`,
       {
         method: "POST",
         headers: {

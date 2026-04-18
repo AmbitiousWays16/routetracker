@@ -34,10 +34,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       return { error: null };
-    } catch (error: any) {
-      console.error('Auth error code:', error.code)
-      console.error('Auth error message:', error.message)
-      return { error: error instanceof Error ? error : new Error('Sign up failed') };
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code: unknown }).code)
+        : 'unknown';
+      const message = error instanceof Error ? error.message : 'Sign up failed';
+      console.error('Auth error code:', code)
+      console.error('Auth error message:', message)
+      return { error: error instanceof Error ? error : new Error(message) };
     }
   };
 
@@ -45,10 +49,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       return { error: null };
-    } catch (error: any) {
-      console.error('Auth error code:', error.code)
-      console.error('Auth error message:', error.message)
-      return { error: error instanceof Error ? error : new Error('Sign in failed') };
+    } catch (error: unknown) {
+      const code = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code: unknown }).code)
+        : 'unknown';
+      const message = error instanceof Error ? error.message : 'Sign in failed';
+      console.error('Auth error code:', code)
+      console.error('Auth error message:', message)
+      return { error: error instanceof Error ? error : new Error(message) };
     }
   };
 
