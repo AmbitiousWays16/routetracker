@@ -1,5 +1,4 @@
-231
-  import * as admin from 'firebase-admin';
+import * as admin from 'firebase-admin';
 import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import fetch from 'node-fetch';
@@ -26,12 +25,18 @@ interface GoogleDirectionsResponse {
   }>;
 }
 
-type OpenAIChatResponse = {
-  choices?: Array<{ message?: { content?: string } }>;
-};
+interface GeminiChatResponse {
+  candidates: Array<{
+    content: {
+      parts: Array<{
+        text: string;
+      }>;
+    };
+  }>;
+}
 
 const GOOGLE_MAPS_API_KEY = defineSecret('GOOGLE_MAPS_API_KEY');
-const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 const SENDGRID_API_KEY = defineSecret('SENDGRID_API_KEY');
 const SENDGRID_FROM_EMAIL = defineSecret('SENDGRID_FROM_EMAIL');
 
@@ -152,8 +157,9 @@ export const staticMapProxy = onRequest(
 );
 
 // ─── 3. Trip Purpose Suggestions (AI) ───────────────────────────
+// Now using Google Gemini API instead of OpenAI
 export const tripPurposeSuggestions = onRequest(
-  { secrets: [OPENAI_API_KEY], cors: true },
+  { secrets: [GEMINI_API_KEY], cors: true },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -165,37 +171,36 @@ export const tripPurposeSuggestions = onRequest(
     }
 
     try {
-      const aiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Gemini 1.5 Flash API endpoint
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`;
+      
+      const geminiRes = await fetch(geminiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY.value()}`,
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You generate short, professional business purpose descriptions for mileage reimbursement forms. Return only the suggestion text, no quotes, no extra explanation.',
-            },
-            {
-              role: 'user',
-              content: `Program: ${program}
+          contents: [{
+            parts: [{
+              text: `Context: You generate short, professional business purpose descriptions for mileage reimbursement forms.
+Program: ${program}
 Destination: ${toAddress}
 
-Write a one-sentence business purpose for this trip.`,
-            },
-          ],
-          max_tokens: 80,
-          temperature: 0.7,
+Task: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`
+            }]
+          }],
+          generationConfig: {
+            maxOutputTokens: 80,
+            temperature: 0.7,
+          }
         }),
       });
 
-      const aiData = (await aiRes.json()) as OpenAIChatResponse;
-      const suggestion = aiData?.choices?.[0]?.message?.content?.trim();
+      const geminiData = (await geminiRes.json()) as GeminiChatResponse;
+      const suggestion = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
       if (!suggestion) {
-        res.status(502).json({ error: 'No suggestion returned from AI' });
+        res.status(502).json({ error: 'No suggestion returned from Gemini' });
         return;
       }
       res.json({ suggestion });
@@ -229,7 +234,8 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `<p><strong>${employeeName}</strong> has submitted a mileage voucher for <strong>${month}</strong> ` +
           `totaling <strong>${totalMiles} miles</strong>.</p>`,
           `<p>Please log in to the RouteTracker app to review and approve or return this voucher.</p>`,
-        ].join('')
+        ].join('
+'),
       };
     case 'approve':
       return {
@@ -242,7 +248,8 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
             ? `<p>The voucher has been forwarded to the <strong>${nextApproverRole}</strong> for further review.</p>`
             : `<p>No further approval is required at this stage.</p>`,
           `<p>Please log in to the RouteTracker app to review.</p>`,
-        ].join('')
+        ].join('
+'),
       };
     case 'reject':
       return {
@@ -253,7 +260,8 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `has been returned for corrections.</p>`,
           rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : '',
           `<p>Please log in to the RouteTracker app to make corrections and resubmit.</p>`,
-        ].join('')
+        ].join('
+'),
       };
     case 'final_approval':
       return {
@@ -263,10 +271,11 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `<p>The mileage voucher for <strong>${employeeName}</strong> for <strong>${month}</strong> ` +
           `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
           `<p>Please log in to the RouteTracker app to process the reimbursement.</p>`,
-        ].join('')
+        ].join('
+'),
       };
     default:
-      return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' }
+      return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' };
   }
 }
 
