@@ -6,19 +6,24 @@ import fetch from 'node-fetch';
 admin.initializeApp();
 
 // ─── Response types ──────────────────────────────────────────────
-type GoogleGeocodeResponse =
-  | { status: 'OK'; results: Array<{ geometry: { location: { lat: number; lng: number } } }> }
-  | { status: string; results?: unknown };
+interface GoogleGeocodeResponse {
+  status: string;
+  results: Array<{
+    geometry: {
+      location: { lat: number; lng: number };
+    };
+  }>;
+}
 
-type GoogleDirectionsResponse =
-  | {
-      status: 'OK';
-      routes: Array<{
-        legs: Array<{ distance: { value: number } }>;
-        overview_polyline: { points: string };
-      }>;
-    }
-  | { status: string; routes?: unknown };
+interface GoogleDirectionsResponse {
+  status: string;
+  routes: Array<{
+    legs: Array<{
+      distance: { value: number };
+    }>;
+    overview_polyline: { points: string };
+  }>;
+}
 
 type OpenAIChatResponse = {
   choices?: Array<{ message?: { content?: string } }>;
@@ -40,7 +45,6 @@ async function verifyToken(authHeader: string | undefined): Promise<admin.auth.D
 }
 
 // ─── 1. Google Maps Route ────────────────────────────────────────
-// Frontend env var: VITE_GOOGLE_MAPS_ROUTE_URL
 export const googleMapsRoute = onRequest(
   { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
   async (req, res) => {
@@ -55,19 +59,20 @@ export const googleMapsRoute = onRequest(
 
     const apiKey = GOOGLE_MAPS_API_KEY.value();
 
-    // Geocode both addresses
     const geocode = async (address: string) => {
       const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
       const r = await fetch(url);
       const data = (await r.json()) as GoogleGeocodeResponse;
-      if (data.status !== 'OK') throw new Error(`Geocode failed for: ${address}`);
-      return data.results[0].geometry.location as { lat: number; lng: number };
+      
+      if (data.status !== 'OK' || !data.results?.[0]) {
+        throw new Error(`Geocode failed for: ${address}`);
+      }
+      return data.results[0].geometry.location;
     };
 
     try {
       const [origin, destination] = await Promise.all([geocode(fromAddress), geocode(toAddress)]);
 
-      // Directions API
       const directionsUrl =
         `https://maps.googleapis.com/maps/api/directions/json` +
         `?origin=${origin.lat},${origin.lng}` +
@@ -77,15 +82,15 @@ export const googleMapsRoute = onRequest(
       const dirRes = await fetch(directionsUrl);
       const dirData = (await dirRes.json()) as GoogleDirectionsResponse;
 
-      if (dirData.status !== 'OK') {
+      if (dirData.status !== 'OK' || !dirData.routes?.[0]?.legs?.[0]) {
         res.status(422).json({ error: 'Could not calculate route', details: dirData.status });
         return;
       }
 
       const leg = dirData.routes[0].legs[0];
-      const meters = leg.distance.value as number;
+      const meters = leg.distance.value;
       const miles = parseFloat((meters / 1609.344).toFixed(1));
-      const encodedPolyline = dirData.routes[0].overview_polyline.points as string;
+      const encodedPolyline = dirData.routes[0].overview_polyline.points;
 
       res.json({
         miles,
@@ -106,7 +111,6 @@ export const googleMapsRoute = onRequest(
 );
 
 // ─── 2. Static Map Proxy ─────────────────────────────────────────
-// Frontend env var: VITE_STATIC_MAP_PROXY_URL
 export const staticMapProxy = onRequest(
   { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
   async (req, res) => {
@@ -134,6 +138,7 @@ export const staticMapProxy = onRequest(
         res.status(502).send('Failed to fetch map image from Google');
         return;
       }
+
       const buffer = await mapRes.buffer();
       res.set('Content-Type', 'image/png');
       res.set('Cache-Control', 'public, max-age=3600');
@@ -146,7 +151,6 @@ export const staticMapProxy = onRequest(
 );
 
 // ─── 3. Trip Purpose Suggestions (AI) ───────────────────────────
-// Frontend env var: VITE_TRIP_PURPOSE_URL
 export const tripPurposeSuggestions = onRequest(
   { secrets: [OPENAI_API_KEY], cors: true },
   async (req, res) => {
@@ -175,7 +179,10 @@ export const tripPurposeSuggestions = onRequest(
             },
             {
               role: 'user',
-              content: `Program: ${program}\nDestination: ${toAddress}\n\nWrite a one-sentence business purpose for this trip.`,
+              content: `Program: ${program}
+Destination: ${toAddress}
+
+Write a one-sentence business purpose for this trip.`,
             },
           ],
           max_tokens: 80,
@@ -190,7 +197,6 @@ export const tripPurposeSuggestions = onRequest(
         res.status(502).json({ error: 'No suggestion returned from AI' });
         return;
       }
-
       res.json({ suggestion });
     } catch (err: unknown) {
       console.error('tripPurposeSuggestions error:', err);
@@ -213,7 +219,6 @@ interface EmailPayload {
 
 function buildEmailContent(payload: EmailPayload): { subject: string; html: string } {
   const { action, employeeName, month, totalMiles, nextApproverRole, rejectionReason } = payload;
-
   switch (action) {
     case 'submit':
       return {
@@ -221,48 +226,48 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
         html: [
           `<h2>Mileage Voucher Submitted for Approval</h2>`,
           `<p><strong>${employeeName}</strong> has submitted a mileage voucher for <strong>${month}</strong> ` +
-            `totaling <strong>${totalMiles} miles</strong>.</p>`,
+          `totaling <strong>${totalMiles} miles</strong>.</p>`,
           `<p>Please log in to the RouteTracker app to review and approve or return this voucher.</p>`,
-        ].join('\n'),
+        ].join('
+'),
       };
-
     case 'approve':
       return {
         subject: `Mileage Voucher Approved – ${employeeName} (${month})`,
         html: [
           `<h2>Mileage Voucher Approved</h2>`,
           `<p>The mileage voucher for <strong>${employeeName}</strong> for <strong>${month}</strong> ` +
-            `totaling <strong>${totalMiles} miles</strong> has been approved at this level.</p>`,
+          `totaling <strong>${totalMiles} miles</strong> has been approved at this level.</p>`,
           nextApproverRole
             ? `<p>The voucher has been forwarded to the <strong>${nextApproverRole}</strong> for further review.</p>`
             : `<p>No further approval is required at this stage.</p>`,
           `<p>Please log in to the RouteTracker app to review.</p>`,
-        ].join('\n'),
+        ].join('
+'),
       };
-
     case 'reject':
       return {
         subject: `Mileage Voucher Returned – ${month}`,
         html: [
           `<h2>Mileage Voucher Returned for Corrections</h2>`,
           `<p>Your mileage voucher for <strong>${month}</strong> totaling <strong>${totalMiles} miles</strong> ` +
-            `has been returned for corrections.</p>`,
+          `has been returned for corrections.</p>`,
           rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : '',
           `<p>Please log in to the RouteTracker app to make corrections and resubmit.</p>`,
-        ].join('\n'),
+        ].join('
+'),
       };
-
     case 'final_approval':
       return {
         subject: `Mileage Voucher Final Approval – ${employeeName} (${month})`,
         html: [
           `<h2>Mileage Voucher Received Final Approval</h2>`,
           `<p>The mileage voucher for <strong>${employeeName}</strong> for <strong>${month}</strong> ` +
-            `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
+          `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
           `<p>Please log in to the RouteTracker app to process the reimbursement.</p>`,
-        ].join('\n'),
+        ].join('
+'),
       };
-
     default:
       return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' };
   }
