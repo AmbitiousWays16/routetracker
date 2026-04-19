@@ -242,7 +242,7 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
             ? `<p>The voucher has been forwarded to the <strong>${nextApproverRole}</strong> for further review.</p>`
             : `<p>No further approval is required at this stage.</p>`,
           `<p>Please log in to the RouteTracker app to review.</p>`,
-        ].join(')
+        ].join(''')
     case 'reject':
       return {
         subject: `Mileage Voucher Returned – ${month}`,
