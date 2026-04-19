@@ -1,6 +1,7 @@
 {
   "name": "functions",
   "scripts": {
+    "lint": "tsc --noEmit",
     "build": "tsc",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions"
