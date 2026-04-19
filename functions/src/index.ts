@@ -242,7 +242,8 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
             ? `<p>The voucher has been forwarded to the <strong>${nextApproverRole}</strong> for further review.</p>`
             : `<p>No further approval is required at this stage.</p>`,
           `<p>Please log in to the RouteTracker app to review.</p>`,
-        ].join(''')
+        ].join('')
+      };
     case 'reject':
       return {
         subject: `Mileage Voucher Returned – ${month}`,
@@ -253,6 +254,7 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : '',
           `<p>Please log in to the RouteTracker app to make corrections and resubmit.</p>`,
         ].join('')
+      };
     case 'final_approval':
       return {
         subject: `Mileage Voucher Final Approval – ${employeeName} (${month})`,
@@ -262,6 +264,7 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
           `<p>Please log in to the RouteTracker app to process the reimbursement.</p>`,
         ].join('')
+      };
     default:
       return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' }
   }
