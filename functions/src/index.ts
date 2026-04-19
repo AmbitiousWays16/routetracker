@@ -228,8 +228,7 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `<p><strong>${employeeName}</strong> has submitted a mileage voucher for <strong>${month}</strong> ` +
           `totaling <strong>${totalMiles} miles</strong>.</p>`,
           `<p>Please log in to the RouteTracker app to review and approve or return this voucher.</p>`,
-        ].join('
-'),
+        ].join(\n')
       };
     case 'approve':
       return {
@@ -243,10 +242,9 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
             : `<p>No further approval is required at this stage.</p>`,
           `<p>Please log in to the RouteTracker app to review.</p>`,
         ].join('
-'),
       };
     case 'reject':
-      return {
+      return \n')
         subject: `Mileage Voucher Returned – ${month}`,
         html: [
           `<h2>Mileage Voucher Returned for Corrections</h2>`,
@@ -255,10 +253,9 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : '',
           `<p>Please log in to the RouteTracker app to make corrections and resubmit.</p>`,
         ].join('
-'),
       };
     case 'final_approval':
-      return {
+      return \n')
         subject: `Mileage Voucher Final Approval – ${employeeName} (${month})`,
         html: [
           `<h2>Mileage Voucher Received Final Approval</h2>`,
@@ -266,10 +263,9 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
           `totaling <strong>${totalMiles} miles</strong> has received final approval and is ready for processing.</p>`,
           `<p>Please log in to the RouteTracker app to process the reimbursement.</p>`,
         ].join('
-'),
       };
     default:
-      return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' };
+      return { subject: 'RouteTracker Notification', html: '<p>You have a new notification in RouteTracker.</p>' }\n')
   }
 }
 
