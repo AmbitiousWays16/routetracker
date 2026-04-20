@@ -19,6 +19,11 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:debug": "playwright test --debug"
   },
+  "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "scheduler": "0.23.2"
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
@@ -56,15 +61,13 @@
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "firebase": "^12.12.0",
-    "firebase-admin": "^13.8.0",
-    "firebase-functions": "^7.2.5",
     "framer-motion": "^12.29.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
-    "react": "^18.3.1",
+    "react": "18.3.1",
     "react-day-picker": "^8.10.1",
-    "react-dom": "^18.3.1",
+    "react-dom": "18.3.1",
     "react-hook-form": "^7.61.1",
     "react-resizable-panels": "^2.1.9",
     "react-router-dom": "^6.30.1",
