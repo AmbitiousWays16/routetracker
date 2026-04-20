@@ -44,7 +44,7 @@ const RESEND_FROM_EMAIL = defineSecret('RESEND_FROM_EMAIL');
 async function verifyToken(authHeader: string | undefined): Promise<admin.auth.DecodedIdToken | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
   try {
-    return await admin.auth().verifyIdToken(authHeader.split('Bearer '));
+    return await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
   } catch {
     return null;
   }
@@ -55,7 +55,6 @@ export const googleMapsRoute = onRequest(
   { 
     secrets: [GOOGLE_MAPS_API_KEY], 
     cors: true,
-    enforceAppCheck: true // <--- ADDED HERE
   },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
@@ -74,10 +73,10 @@ export const googleMapsRoute = onRequest(
       const r = await fetch(url);
       const data = (await r.json()) as GoogleGeocodeResponse;
       
-      if (data.status !== 'OK' || !data.results?.) {
+      if (data.status !== 'OK' || !data.results?.[0]) {
         throw new Error(`Geocode failed for: ${address}`);
       }
-      return data.results.geometry.location;
+      return data.results[0].geometry.location;
     };
 
     try {
@@ -92,15 +91,15 @@ export const googleMapsRoute = onRequest(
       const dirRes = await fetch(directionsUrl);
       const dirData = (await dirRes.json()) as GoogleDirectionsResponse;
 
-      if (dirData.status !== 'OK' || !dirData.routes?.?.legs?.) {
+      if (dirData.status !== 'OK' || !dirData.routes?.[0]?.legs?.[0]) {
         res.status(422).json({ error: 'Could not calculate route', details: dirData.status });
         return;
       }
 
-      const leg = dirData.routes.legs;
+      const leg = dirData.routes[0].legs[0];
       const meters = leg.distance.value;
       const miles = parseFloat((meters / 1609.344).toFixed(1));
-      const encodedPolyline = dirData.routes.overview_polyline.points;
+      const encodedPolyline = dirData.routes[0].overview_polyline.points;
 
       res.json({
         miles,
@@ -125,7 +124,6 @@ export const staticMapProxy = onRequest(
   { 
     secrets: [GOOGLE_MAPS_API_KEY], 
     cors: true,
-    enforceAppCheck: true // <--- ADDED HERE
   },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
@@ -169,7 +167,6 @@ export const tripPurposeSuggestions = onRequest(
   { 
     secrets: [GEMINI_API_KEY], 
     cors: true,
-    enforceAppCheck: true // <--- ADDED HERE
   },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
@@ -202,7 +199,7 @@ Task: Write a one-sentence business purpose for this trip. Return only the sugge
       });
 
       const geminiData = (await geminiRes.json()) as GeminiChatResponse;
-      const suggestion = geminiData?.candidates?.?.content?.parts?.?.text?.trim();
+      const suggestion = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
       if (!suggestion) {
         res.status(502).json({ error: 'No suggestion returned from Gemini' });
@@ -260,7 +257,6 @@ export const sendVoucherEmail = onRequest(
   { 
     secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL], 
     cors: true,
-    enforceAppCheck: true // <--- ADDED HERE
   },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
