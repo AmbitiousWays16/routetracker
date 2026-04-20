@@ -44,7 +44,7 @@ const RESEND_FROM_EMAIL = defineSecret('RESEND_FROM_EMAIL');
 async function verifyToken(authHeader: string | undefined): Promise<admin.auth.DecodedIdToken | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
   try {
-    return await admin.auth().verifyIdToken(authHeader.split('Bearer ')[1]);
+    return await admin.auth().verifyIdToken(authHeader.split('Bearer '));
   } catch {
     return null;
   }
@@ -52,7 +52,11 @@ async function verifyToken(authHeader: string | undefined): Promise<admin.auth.D
 
 // ─── 1. Google Maps Route ────────────────────────────────────────
 export const googleMapsRoute = onRequest(
-  { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
+  { 
+    secrets: [GOOGLE_MAPS_API_KEY], 
+    cors: true,
+    enforceAppCheck: true // <--- ADDED HERE
+  },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -70,10 +74,10 @@ export const googleMapsRoute = onRequest(
       const r = await fetch(url);
       const data = (await r.json()) as GoogleGeocodeResponse;
       
-      if (data.status !== 'OK' || !data.results?.[0]) {
+      if (data.status !== 'OK' || !data.results?.) {
         throw new Error(`Geocode failed for: ${address}`);
       }
-      return data.results[0].geometry.location;
+      return data.results.geometry.location;
     };
 
     try {
@@ -88,15 +92,15 @@ export const googleMapsRoute = onRequest(
       const dirRes = await fetch(directionsUrl);
       const dirData = (await dirRes.json()) as GoogleDirectionsResponse;
 
-      if (dirData.status !== 'OK' || !dirData.routes?.[0]?.legs?.[0]) {
+      if (dirData.status !== 'OK' || !dirData.routes?.?.legs?.) {
         res.status(422).json({ error: 'Could not calculate route', details: dirData.status });
         return;
       }
 
-      const leg = dirData.routes[0].legs[0];
+      const leg = dirData.routes.legs;
       const meters = leg.distance.value;
       const miles = parseFloat((meters / 1609.344).toFixed(1));
-      const encodedPolyline = dirData.routes[0].overview_polyline.points;
+      const encodedPolyline = dirData.routes.overview_polyline.points;
 
       res.json({
         miles,
@@ -118,7 +122,11 @@ export const googleMapsRoute = onRequest(
 
 // ─── 2. Static Map Proxy ─────────────────────────────────────────
 export const staticMapProxy = onRequest(
-  { secrets: [GOOGLE_MAPS_API_KEY], cors: true },
+  { 
+    secrets: [GOOGLE_MAPS_API_KEY], 
+    cors: true,
+    enforceAppCheck: true // <--- ADDED HERE
+  },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).send('Unauthorized'); return; }
@@ -158,7 +166,11 @@ export const staticMapProxy = onRequest(
 
 // ─── 3. Trip Purpose Suggestions (AI) ───────────────────────────
 export const tripPurposeSuggestions = onRequest(
-  { secrets: [GEMINI_API_KEY], cors: true },
+  { 
+    secrets: [GEMINI_API_KEY], 
+    cors: true,
+    enforceAppCheck: true // <--- ADDED HERE
+  },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
@@ -190,7 +202,7 @@ Task: Write a one-sentence business purpose for this trip. Return only the sugge
       });
 
       const geminiData = (await geminiRes.json()) as GeminiChatResponse;
-      const suggestion = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      const suggestion = geminiData?.candidates?.?.content?.parts?.?.text?.trim();
 
       if (!suggestion) {
         res.status(502).json({ error: 'No suggestion returned from Gemini' });
@@ -245,7 +257,11 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
 }
 
 export const sendVoucherEmail = onRequest(
-  { secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL], cors: true },
+  { 
+    secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL], 
+    cors: true,
+    enforceAppCheck: true // <--- ADDED HERE
+  },
   async (req, res) => {
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
