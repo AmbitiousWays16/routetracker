@@ -6,7 +6,20 @@ import corsLib from 'cors';
 
 admin.initializeApp();
 
-const corsHandler = corsLib({ origin: 'https://triptrackerapp.tech' });
+const allowedOrigins = [
+  'https://triptrackerapp.tech',
+  'https://routetracker-92b42.web.app',
+];
+
+const corsHandler = corsLib({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+});
 
 // ─── Response types ───────────────────────────────────────────────
 interface GoogleGeocodeResponse {
@@ -294,5 +307,3 @@ export const sendVoucherEmail = onRequest(
     });
   }
 );
-
-// force-redeploy
