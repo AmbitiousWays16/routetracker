@@ -40,6 +40,16 @@ const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 const RESEND_FROM_EMAIL = defineSecret('RESEND_FROM_EMAIL');
 
+const ALLOWED_ORIGIN = 'https://triptrackerapp.tech';
+
+// ─── CORS helper ─────────────────────────────────────────────────
+function setCorsHeaders(res: import('express').Response) {
+  res.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+  res.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.set('Access-Control-Max-Age', '3600');
+}
+
 // ─── Auth helper ────────────────────────────────────────────────
 async function verifyToken(authHeader: string | undefined): Promise<admin.auth.DecodedIdToken | null> {
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -54,9 +64,12 @@ async function verifyToken(authHeader: string | undefined): Promise<admin.auth.D
 export const googleMapsRoute = onRequest(
   { 
     secrets: [GOOGLE_MAPS_API_KEY], 
-    cors: true,
+    cors: false,
   },
   async (req, res) => {
+    setCorsHeaders(res);
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
@@ -123,9 +136,12 @@ export const googleMapsRoute = onRequest(
 export const staticMapProxy = onRequest(
   { 
     secrets: [GOOGLE_MAPS_API_KEY], 
-    cors: true,
+    cors: false,
   },
   async (req, res) => {
+    setCorsHeaders(res);
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).send('Unauthorized'); return; }
 
@@ -166,9 +182,12 @@ export const staticMapProxy = onRequest(
 export const tripPurposeSuggestions = onRequest(
   { 
     secrets: [GEMINI_API_KEY], 
-    cors: true,
+    cors: false,
   },
   async (req, res) => {
+    setCorsHeaders(res);
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
@@ -187,11 +206,7 @@ export const tripPurposeSuggestions = onRequest(
         body: JSON.stringify({
           contents: [{
             parts: [{
-              text: `Context: You generate short, professional business purpose descriptions for mileage reimbursement forms.
-Program: ${program}
-Destination: ${toAddress}
-
-Task: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`
+              text: `Context: You generate short, professional business purpose descriptions for mileage reimbursement forms.\nProgram: ${program}\nDestination: ${toAddress}\n\nTask: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`
             }]
           }],
           generationConfig: { maxOutputTokens: 80, temperature: 0.7 }
@@ -256,9 +271,12 @@ function buildEmailContent(payload: EmailPayload): { subject: string; html: stri
 export const sendVoucherEmail = onRequest(
   { 
     secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL], 
-    cors: true,
+    cors: false,
   },
   async (req, res) => {
+    setCorsHeaders(res);
+    if (req.method === 'OPTIONS') { res.status(204).send(''); return; }
+
     const user = await verifyToken(req.headers.authorization);
     if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
