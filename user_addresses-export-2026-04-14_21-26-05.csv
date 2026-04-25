@@ -1,2 +1,2 @@
-id;user_id;name;address;created_at;updated_at
-8b39b9f2-f3a5-4c11-9cc5-1500770471eb;47ff3a60-cb8d-445a-a31d-bc6841c6db37;Champions;222 Keith St Hanford CA 93230;2026-02-04 21:33:50.268701+00;2026-02-04 21:33:50.268701+00
+id,user_id,name,address,created_at,updated_at
+8b39b9f2-f3a5-4c11-9cc5-1500770471eb,47ff3a60-cb8d-445a-a31d-bc6841c6db37,Champions,222 Keith St Hanford CA 93230,2026-02-04 21:33:50.268701+00,2026-02-04 21:33:50.268701+00
