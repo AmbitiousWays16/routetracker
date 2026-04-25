@@ -1,4 +1,4 @@
-id;user_id;full_name;email;job_title;created_at;updated_at
-b9835a1e-f190-47a5-90e8-09a30280dac6;cfcff08c-afa5-4aca-b49c-8841eab08f00;;hustlelife2020@pm.me;;2026-02-06 09:57:26.079932+00;2026-02-06 09:57:26.079932+00
-034807f9-f967-4f1a-aec6-0cdf7ceb3f13;e2c6d272-acd2-4b23-a794-3bfcd77faf34;Robert Gomez;ambitiousways2017@outlook.com;Vice President;2026-02-04 12:55:54.489149+00;2026-02-07 09:05:58.490607+00
-b098bbe1-7786-4596-bec8-215e27c41ac0;47ff3a60-cb8d-445a-a31d-bc6841c6db37;Robert Gomez;robert.gomez@westcare.com;Supervisor;2026-01-27 04:06:04.652636+00;2026-02-21 21:31:39.744877+00
+id,user_id,full_name,email,job_title,created_at,updated_at
+b9835a1e-f190-47a5-90e8-09a30280dac6,cfcff08c-afa5-4aca-b49c-8841eab08f00,,hustlelife2020@pm.me,,2/6/2026 1:57,2/6/2026 1:57
+034807f9-f967-4f1a-aec6-0cdf7ceb3f13,e2c6d272-acd2-4b23-a794-3bfcd77faf34,Robert Gomez,ambitiousways2017@outlook.com,Vice President,2/4/2026 4:55,2/7/2026 1:05
+b098bbe1-7786-4596-bec8-215e27c41ac0,47ff3a60-cb8d-445a-a31d-bc6841c6db37,Robert Gomez,robert.gomez@westcare.com,Supervisor,1/26/2026 20:06,2/21/2026 13:31
