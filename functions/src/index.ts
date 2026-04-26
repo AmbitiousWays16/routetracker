@@ -41,15 +41,7 @@ interface GoogleDirectionsResponse {
   }>;
 }
 
-interface GeminiChatResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-}
+
 
 const GOOGLE_MAPS_API_KEY = defineSecret('GOOGLE_MAPS_API_KEY');
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
@@ -191,9 +183,16 @@ export const tripPurposeSuggestions = onRequest(
       try {
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`;
 
+        const requestOrigin = Array.isArray(req.headers.origin) ? req.headers.origin[0] : req.headers.origin;
+        const requestReferer = Array.isArray(req.headers.referer) ? req.headers.referer[0] : req.headers.referer;
+        const referer = requestReferer || requestOrigin || 'https://triptrackerapp.tech/';
+
         const geminiRes = await fetch(geminiUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Referer': referer
+          },
           body: JSON.stringify({
             contents: [{
               parts: [{
@@ -204,11 +203,19 @@ export const tripPurposeSuggestions = onRequest(
           }),
         });
 
-        const geminiData = (await geminiRes.json()) as GeminiChatResponse;
+        const geminiData = (await geminiRes.json()) as any;
+        
+        if (!geminiRes.ok || geminiData.error) {
+          console.error('Gemini API Error:', geminiData.error || geminiData);
+          res.status(502).json({ error: 'Gemini API call failed', details: geminiData.error || geminiData });
+          return;
+        }
+
         const suggestion = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
         if (!suggestion) {
-          res.status(502).json({ error: 'No suggestion returned from Gemini' });
+          console.error('No valid suggestion in Gemini response:', JSON.stringify(geminiData));
+          res.status(502).json({ error: 'No suggestion returned from Gemini', details: geminiData });
           return;
         }
         res.json({ suggestion });
