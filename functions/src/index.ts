@@ -202,7 +202,6 @@ export const tripPurposeSuggestions = onRequest(
     });
   }
 );
-// ... [Keep the remaining sendVoucherEmail function] ...
 // ─── 4. Voucher Email Notifications (Resend) ──────────────────────
 interface EmailPayload {
   action: 'submit' | 'approve' | 'reject' | 'final_approval';
