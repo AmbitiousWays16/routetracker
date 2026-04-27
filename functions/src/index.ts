@@ -3,6 +3,7 @@ import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import fetch from 'node-fetch';
 import corsLib from 'cors';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 admin.initializeApp();
 
@@ -171,8 +172,8 @@ export const tripPurposeSuggestions = onRequest(
   { secrets: [GEMINI_API_KEY], cors: false },
   (req, res) => {
     corsHandler(req, res, async () => {
-      const user = await verifyToken(req.headers.authorization);
-      if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+      const userToken = await verifyToken(req.headers.authorization);
+      if (!userToken) { res.status(401).json({ error: 'Unauthorized' }); return; }
 
       const { program, toAddress } = req.body as { program: string; toAddress: string };
       if (!program || !toAddress) {
@@ -181,41 +182,16 @@ export const tripPurposeSuggestions = onRequest(
       }
 
       try {
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`;
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const requestOrigin = Array.isArray(req.headers.origin) ? req.headers.origin[0] : req.headers.origin;
-        const requestReferer = Array.isArray(req.headers.referer) ? req.headers.referer[0] : req.headers.referer;
-        const referer = requestReferer || requestOrigin || 'https://triptrackerapp.tech/';
+        const prompt = `Context: Generate short, professional business purpose descriptions for mileage reimbursement forms.\nProgram: ${program}\nDestination: ${toAddress}\n\nTask: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`;
 
-        const geminiRes = await fetch(geminiUrl, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Referer': referer
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{
-                text: `Context: You generate short, professional business purpose descriptions for mileage reimbursement forms.\nProgram: ${program}\nDestination: ${toAddress}\n\nTask: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`
-              }]
-            }],
-            generationConfig: { maxOutputTokens: 80, temperature: 0.7 }
-          }),
-        });
-
-        const geminiData = (await geminiRes.json()) as any;
-        
-        if (!geminiRes.ok || geminiData.error) {
-          console.error('Gemini API Error:', geminiData.error || geminiData);
-          res.status(502).json({ error: 'Gemini API call failed', details: geminiData.error || geminiData });
-          return;
-        }
-
-        const suggestion = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+        const result = await model.generateContent(prompt);
+        const suggestion = result.response.text().trim();
 
         if (!suggestion) {
-          console.error('No valid suggestion in Gemini response:', JSON.stringify(geminiData));
-          res.status(502).json({ error: 'No suggestion returned from Gemini', details: geminiData });
+          res.status(502).json({ error: 'No suggestion returned from Gemini' });
           return;
         }
         res.json({ suggestion });
@@ -226,7 +202,6 @@ export const tripPurposeSuggestions = onRequest(
     });
   }
 );
-
 // ─── 4. Voucher Email Notifications (Resend) ──────────────────────
 interface EmailPayload {
   action: 'submit' | 'approve' | 'reject' | 'final_approval';
