@@ -182,8 +182,18 @@ export const tripPurposeSuggestions = onRequest(
       }
 
       try {
+        // Extract the referer from the incoming client request
+        const requestOrigin = Array.isArray(req.headers.origin) ? req.headers.origin : req.headers.origin;
+        const requestReferer = Array.isArray(req.headers.referer) ? req.headers.referer : req.headers.referer;
+        const referer = requestReferer || requestOrigin || 'https://triptrackerapp.tech/';
+
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        // Pass the referer via customHeaders in RequestOptions
+        const model = genAI.getGenerativeModel(
+          { model: "gemini-1.5-flash" },
+          { customHeaders: { Referer: referer } }
+        );
 
         const prompt = `Context: Generate short, professional business purpose descriptions for mileage reimbursement forms.\nProgram: ${program}\nDestination: ${toAddress}\n\nTask: Write a one-sentence business purpose for this trip. Return only the suggestion text, no quotes, no extra explanation.`;
 
