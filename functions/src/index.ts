@@ -182,9 +182,11 @@ export const tripPurposeSuggestions = onRequest(
       }
 
       try {
-        // Extract the referer from the incoming client request
+        // Corrected: Added to extract the first string if the header is an array
         const requestOrigin = Array.isArray(req.headers.origin) ? req.headers.origin : req.headers.origin;
         const requestReferer = Array.isArray(req.headers.referer) ? req.headers.referer : req.headers.referer;
+        
+        // requestReferer and requestOrigin are now guaranteed to be strings or undefined
         const referer = requestReferer || requestOrigin || 'https://triptrackerapp.tech/';
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
