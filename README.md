@@ -9,7 +9,6 @@ RouteTracker is a mileage-tracking and voucher-reimbursement web application bui
 - **Mileage Vouchers** — Generate monthly vouchers summarizing total miles.
 - **Multi-Level Approval Workflow** — Vouchers flow through Supervisor → VP → COO approval.
 - **Email Notifications** — Automatic email alerts (via SendGrid) on submission, approval, and rejection.
-- **AI Trip Purpose Suggestions** — OpenAI-powered suggestions for business-purpose descriptions.
 - **Role-Based Access** — Admin, Supervisor, VP, COO, and standard user roles.
 - **Static Route Maps** — Proxied Google Static Maps images (no API key exposure to the client).
 
@@ -25,7 +24,6 @@ RouteTracker is a mileage-tracking and voucher-reimbursement web application bui
 | Hosting | Firebase Hosting |
 | Email | SendGrid (via Cloud Function) |
 | Maps | Google Maps Directions & Static Maps APIs |
-| AI | OpenAI GPT-4o-mini (trip purpose suggestions) |
 | Testing | Vitest, React Testing Library, Playwright |
 
 ## Architecture Overview
@@ -43,11 +41,10 @@ RouteTracker is a mileage-tracking and voucher-reimbursement web application bui
 │             Firebase Cloud Functions              │
 │  googleMapsRoute      – route calculation         │
 │  staticMapProxy       – proxied map images        │
-│  tripPurposeSuggestions – AI suggestions           │
 │  sendVoucherEmail     – email notifications       │
 ├──────────────────────────────────────────────────┤
 │              External Services                    │
-│  Google Maps APIs · OpenAI · SendGrid             │
+│  Google Maps APIs · SendGrid                      │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -58,7 +55,7 @@ All Cloud Functions authenticate callers by verifying Firebase ID tokens (`Autho
 - **Node.js 20+** — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 - **Firebase CLI** — `npm install -g firebase-tools`
 - A **Firebase project** with Authentication and Firestore enabled
-- API keys for **Google Maps**, **OpenAI**, and **SendGrid** (for full functionality)
+- API keys for **Google Maps** and **SendGrid** (for full functionality)
 
 ## Getting Started
 
@@ -95,7 +92,6 @@ The `.env` file requires the following variables (see `.env.example` for details
 | `VITE_FIREBASE_APP_ID` | Firebase app ID |
 | `VITE_FIREBASE_GOOGLE_MAPS_API_KEY` | Google Maps API key (client-side, for embedding) |
 | `VITE_GOOGLE_MAPS_ROUTE_URL` | URL for the `googleMapsRoute` Cloud Function |
-| `VITE_TRIP_PURPOSE_URL` | URL for the `tripPurposeSuggestions` Cloud Function |
 | `VITE_STATIC_MAP_PROXY_URL` | URL for the `staticMapProxy` Cloud Function |
 | `VITE_SEND_VOUCHER_EMAIL_URL` | URL for the `sendVoucherEmail` Cloud Function |
 
@@ -107,7 +103,6 @@ Cloud Functions use **Firebase Secret Manager** for sensitive keys. Set each sec
 
 ```sh
 firebase functions:secrets:set GOOGLE_MAPS_API_KEY
-firebase functions:secrets:set OPENAI_API_KEY
 firebase functions:secrets:set SENDGRID_API_KEY
 firebase functions:secrets:set SENDGRID_FROM_EMAIL
 ```
@@ -169,7 +164,6 @@ All functions are defined in `functions/src/index.ts` and deployed as Firebase C
 |---|---|---|
 | `googleMapsRoute` | POST | Geocodes two addresses, calculates driving distance and returns miles, route URL, and encoded polyline |
 | `staticMapProxy` | GET | Proxies Google Static Maps API to return a route map image without exposing the API key to the client |
-| `tripPurposeSuggestions` | POST | Uses OpenAI to generate a professional business-purpose description for a trip |
 | `sendVoucherEmail` | POST | Sends voucher notification emails via SendGrid (submit, approve, reject, final approval) |
 
 ### Deploying Cloud Functions
