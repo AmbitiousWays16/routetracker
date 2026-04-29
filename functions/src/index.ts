@@ -252,3 +252,89 @@ export const sendVoucherEmail = onRequest(
     });
   }
 );
+
+// ─── 5. Invite User ───────────────────────────────────────────────
+export const inviteUser = onRequest(
+  { secrets: [RESEND_API_KEY, RESEND_FROM_EMAIL], cors: false },
+  (req, res) => {
+    corsHandler(req, res, async () => {
+      const caller = await verifyToken(req.headers.authorization);
+      if (!caller) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+      if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+      // Verify caller is an admin via Firestore
+      const db = admin.firestore();
+      const adminSnap = await db.collection('user_roles')
+        .where('user_id', '==', caller.uid)
+        .where('role', '==', 'admin')
+        .get();
+      if (adminSnap.empty) { res.status(403).json({ error: 'Forbidden: admin role required' }); return; }
+
+      const { email } = req.body as { email: string };
+      if (!email || typeof email !== 'string' || !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(email.trim())) {
+        res.status(400).json({ error: 'A valid email address is required' });
+        return;
+      }
+
+      try {
+        // Create or retrieve the Firebase Auth user
+        let uid: string;
+        try {
+          const existing = await admin.auth().getUserByEmail(email);
+          uid = existing.uid;
+        } catch {
+          const newUser = await admin.auth().createUser({ email });
+          uid = newUser.uid;
+        }
+
+        // Generate a password reset link (serves as the invitation / setup link)
+        const actionLink = await admin.auth().generatePasswordResetLink(email);
+
+        // Ensure a profile document exists in Firestore
+        const profileRef = db.collection('profiles').doc(uid);
+        const profileSnap = await profileRef.get();
+        if (!profileSnap.exists) {
+          await profileRef.set({ user_id: uid, email, created_at: admin.firestore.FieldValue.serverTimestamp() });
+        }
+
+        // Send invitation email via Resend
+        const inviteHtml = `
+          <h2>You've been invited to RouteTracker</h2>
+          <p>An administrator has invited you to join the RouteTracker mileage tracking application.</p>
+          <p>Click the button below to set your password and get started:</p>
+          <p><a href="${actionLink}" style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Accept Invitation &amp; Set Password</a></p>
+          <p>If the button doesn't work, copy and paste this link into your browser:</p>
+          <p style="word-break:break-all;">${actionLink}</p>
+          <p>This link will expire in 24 hours.</p>
+        `;
+
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${RESEND_API_KEY.value()}`,
+          },
+          body: JSON.stringify({
+            from: RESEND_FROM_EMAIL.value(),
+            to: email,
+            subject: 'You\'ve been invited to RouteTracker',
+            html: inviteHtml,
+          }),
+        });
+
+        if (!resendRes.ok) {
+          const errorBody = await resendRes.text();
+          console.error('Resend invite error:', resendRes.status, errorBody);
+          res.status(502).json({ error: 'Failed to send invitation email' });
+          return;
+        }
+
+        res.json({ success: true, uid });
+      } catch (err: unknown) {
+        console.error('inviteUser error:', err);
+        res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
+      }
+    });
+  }
+);

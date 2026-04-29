@@ -8,6 +8,8 @@ import {
   getDocs,
   addDoc,
   deleteDoc,
+  setDoc,
+  doc,
   orderBy,
 } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -20,6 +22,7 @@ export interface UserWithRoles {
   userId: string;
   email: string | null;
   roles: AppRole[];
+  supervisorId?: string | null;
 }
 
 export const useUserManagement = () => {
@@ -70,12 +73,25 @@ export const useUserManagement = () => {
         );
       }
 
+      // Fetch supervisor assignments
+      const supervisorData: { user_id: string; supervisor_id: string }[] = [];
+      for (const batch of chunk(userIds, 30)) {
+        const supSnap = await getDocs(
+          query(collection(db, 'user_supervisors'), where('user_id', 'in', batch))
+        );
+        supSnap.docs.forEach((d) =>
+          supervisorData.push(d.data() as { user_id: string; supervisor_id: string })
+        );
+      }
+
       const usersWithRoles: UserWithRoles[] = profilesSnap.docs.map((d) => {
         const profile = d.data() as { user_id: string; email: string };
+        const sup = supervisorData.find((s) => s.user_id === profile.user_id);
         return {
           userId: profile.user_id,
           email: profile.email,
           roles: rolesData.filter((r) => r.user_id === profile.user_id).map((r) => r.role),
+          supervisorId: sup?.supervisor_id ?? null,
         };
       });
 
@@ -147,5 +163,49 @@ export const useUserManagement = () => {
     }
   }, [user, isAdmin]);
 
-  return { users, loading, isAdmin, assignRole, removeRole, refetch: fetchUsers };
+  const assignSupervisor = useCallback(async (userId: string, supervisorId: string): Promise<boolean> => {
+    if (!user || !isAdmin) { toast.error('Only admins can assign supervisors'); return false; }
+    if (userId === supervisorId) { toast.error('A user cannot be their own supervisor'); return false; }
+
+    try {
+      // Verify the target user has the 'supervisor' role in Firestore
+      const supervisorRoleSnap = await getDocs(
+        query(collection(db, 'user_roles'), where('user_id', '==', supervisorId), where('role', '==', 'supervisor'))
+      );
+      if (supervisorRoleSnap.empty) {
+        toast.error('The selected user does not have the Supervisor role');
+        return false;
+      }
+
+      await setDoc(doc(db, 'user_supervisors', userId), { user_id: userId, supervisor_id: supervisorId });
+      setUsers((prev) =>
+        prev.map((u) => u.userId === userId ? { ...u, supervisorId } : u)
+      );
+      toast.success('Supervisor assigned successfully');
+      return true;
+    } catch (error) {
+      console.error('Error assigning supervisor:', error);
+      toast.error('Failed to assign supervisor');
+      return false;
+    }
+  }, [user, isAdmin]);
+
+  const removeSupervisor = useCallback(async (userId: string): Promise<boolean> => {
+    if (!user || !isAdmin) { toast.error('Only admins can remove supervisors'); return false; }
+
+    try {
+      await deleteDoc(doc(db, 'user_supervisors', userId));
+      setUsers((prev) =>
+        prev.map((u) => u.userId === userId ? { ...u, supervisorId: null } : u)
+      );
+      toast.success('Supervisor removed successfully');
+      return true;
+    } catch (error) {
+      console.error('Error removing supervisor:', error);
+      toast.error('Failed to remove supervisor');
+      return false;
+    }
+  }, [user, isAdmin]);
+
+  return { users, loading, isAdmin, assignRole, removeRole, assignSupervisor, removeSupervisor, refetch: fetchUsers };
 };
