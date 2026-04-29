@@ -321,7 +321,7 @@ export const inviteUser = onRequest(
       if (adminSnap.empty) { res.status(403).json({ error: 'Forbidden: admin role required' }); return; }
 
       const { email } = req.body as { email: string };
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!email || typeof email !== 'string' || !/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/.test(email.trim())) {
         res.status(400).json({ error: 'A valid email address is required' });
         return;
       }

@@ -168,6 +168,15 @@ export const useUserManagement = () => {
     if (userId === supervisorId) { toast.error('A user cannot be their own supervisor'); return false; }
 
     try {
+      // Verify the target user has the 'supervisor' role in Firestore
+      const supervisorRoleSnap = await getDocs(
+        query(collection(db, 'user_roles'), where('user_id', '==', supervisorId), where('role', '==', 'supervisor'))
+      );
+      if (supervisorRoleSnap.empty) {
+        toast.error('The selected user does not have the Supervisor role');
+        return false;
+      }
+
       await setDoc(doc(db, 'user_supervisors', userId), { user_id: userId, supervisor_id: supervisorId });
       setUsers((prev) =>
         prev.map((u) => u.userId === userId ? { ...u, supervisorId } : u)
