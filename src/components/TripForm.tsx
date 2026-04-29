@@ -5,13 +5,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from 'lucide-react';
 import { Trip, RouteMapData } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ProxyMapImage } from './ProxyMapImage';
-import { auth } from '@/lib/firebase';
 import { z } from 'zod';
 import { toast } from 'sonner';
 
@@ -49,44 +48,7 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
   const [routeUrl, setRouteUrl] = useState('');
   const [routeMapData, setRouteMapData] = useState<RouteMapData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
-  const [isGeneratingPurpose, setIsGeneratingPurpose] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
-
-  const handleGeneratePurpose = async () => {
-    setIsGeneratingPurpose(true);
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) { toast.error('You must be signed in'); return; }
-      const token = await currentUser.getIdToken();
-
-      const response = await fetch(
-        import.meta.env.VITE_TRIP_PURPOSE_URL,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ program, toAddress }),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok || data?.error) {
-        toast.error(data?.error || 'Failed to generate suggestion');
-        return;
-      }
-      if (data?.suggestion) {
-        setBusinessPurpose(data.suggestion);
-        toast.success('AI suggestion generated');
-      }
-    } catch (err) {
-      console.error('AI suggestion error:', err);
-      toast.error('Failed to generate suggestion. Please try again.');
-    } finally {
-      setIsGeneratingPurpose(false);
-    }
-  };
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
@@ -177,13 +139,7 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
             </div>
           )}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="purpose" className="text-sm font-medium">Business Purpose</Label>
-              <Button type="button" variant="ghost" size="sm" className="h-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 font-medium" onClick={handleGeneratePurpose} disabled={isGeneratingPurpose}>
-                {isGeneratingPurpose ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
-                AI Suggest
-              </Button>
-            </div>
+            <Label htmlFor="purpose" className="text-sm font-medium">Business Purpose</Label>
             <Input id="purpose" placeholder="Describe the business purpose of this trip" value={businessPurpose} onChange={(e) => setBusinessPurpose(e.target.value)} className="h-10" />
           </div>
           <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
