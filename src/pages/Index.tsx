@@ -7,12 +7,14 @@ import { ArchivePromptDialog } from '@/components/ArchivePromptDialog';
 import { VoucherSubmitDialog } from '@/components/VoucherSubmitDialog';
 import { useTrips } from '@/hooks/useTrips';
 import { usePrograms } from '@/hooks/usePrograms';
+import { useTripSuggestions } from '@/hooks/useTripSuggestions';
 import { auth } from '@/lib/firebase';
 import { toast } from 'sonner';
 
 const Index = () => {
   const { trips, addTrip, deleteTrip, totalMiles, selectedMonth, changeMonth, isCurrentMonth, refetch } = useTrips();
   const { programs, loading: programsLoading, isAdmin, addProgram, updateProgram, deleteProgram } = usePrograms();
+  const { suggestions, loading: suggestionsLoading } = useTripSuggestions();
 
   const handleCalculateRoute = async (from: string, to: string) => {
     console.log('Starting route calculation...', { from: from.substring(0, 20), to: to.substring(0, 20) });
@@ -111,6 +113,8 @@ const Index = () => {
               onAddProgram={addProgram}
               onUpdateProgram={updateProgram}
               onDeleteProgram={deleteProgram}
+              suggestions={suggestions}
+              suggestionsLoading={suggestionsLoading}
             />
           )}
           <TripList

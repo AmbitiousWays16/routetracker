@@ -46,6 +46,7 @@ interface GoogleDirectionsResponse {
 const GOOGLE_MAPS_API_KEY = defineSecret('GOOGLE_MAPS_API_KEY');
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
 const RESEND_FROM_EMAIL = defineSecret('RESEND_FROM_EMAIL');
+const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 
 // ─── Auth helper ──────────────────────────────────────────────────
 async function verifyToken(authHeader: string | undefined): Promise<admin.auth.DecodedIdToken | null> {
@@ -247,6 +248,98 @@ export const sendVoucherEmail = onRequest(
         res.json({ success: true });
       } catch (err: unknown) {
         console.error('sendVoucherEmail error:', err);
+        res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
+      }
+    });
+  }
+);
+
+// ─── 4. AI Trip Suggestions (Gemini) ─────────────────────────────
+export interface TripSuggestion {
+  fromAddress: string;
+  toAddress: string;
+  businessPurpose: string;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
+    };
+  }>;
+}
+
+export const getTripSuggestions = onRequest(
+  { secrets: [GEMINI_API_KEY], cors: false },
+  (req, res) => {
+    corsHandler(req, res, async () => {
+      const user = await verifyToken(req.headers.authorization);
+      if (!user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+      if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+
+      try {
+        const db = admin.firestore();
+        const tripsSnap = await db.collection('trips')
+          .where('user_id', '==', user.uid)
+          .orderBy('date', 'desc')
+          .limit(20)
+          .get();
+
+        if (tripsSnap.empty) {
+          res.json({ suggestions: [] });
+          return;
+        }
+
+        const recentTrips = tripsSnap.docs.map((d) => ({
+          date: d.data().date as string,
+          from: d.data().from_address as string,
+          to: d.data().to_address as string,
+          purpose: d.data().purpose as string,
+        }));
+
+        const prompt =
+          'Based on these recent trips, predict the top 3 most likely next trips for this user. ' +
+          'Return a JSON array of up to 3 objects with fields: fromAddress, toAddress, businessPurpose. ' +
+          'Only return the JSON array, no other text.\n\nRecent trips:\n' +
+          JSON.stringify(recentTrips, null, 2);
+
+        const geminiRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY.value()}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { responseMimeType: 'application/json' },
+            }),
+          }
+        );
+
+        if (!geminiRes.ok) {
+          console.error('Gemini API error:', geminiRes.status, await geminiRes.text());
+          res.status(502).json({ error: 'Failed to get AI suggestions' });
+          return;
+        }
+
+        const geminiData = (await geminiRes.json()) as GeminiResponse;
+        const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? '[]';
+
+        let suggestions: TripSuggestion[] = [];
+        try {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) {
+            suggestions = parsed.slice(0, 3).filter(
+              (s) => s && typeof s.fromAddress === 'string' && typeof s.toAddress === 'string' && typeof s.businessPurpose === 'string'
+            );
+          }
+        } catch {
+          suggestions = [];
+        }
+
+        res.json({ suggestions });
+      } catch (err: unknown) {
+        console.error('getTripSuggestions error:', err);
         res.status(500).json({ error: err instanceof Error ? err.message : 'Internal server error' });
       }
     });
