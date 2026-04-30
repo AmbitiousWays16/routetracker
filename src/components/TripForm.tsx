@@ -5,9 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw } from 'lucide-react';
+import { MapPin, Calendar, Car, FileText, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { Trip, RouteMapData } from '@/types/mileage';
 import { Program } from '@/hooks/usePrograms';
+import { TripSuggestion } from '@/hooks/useTripSuggestions';
 import { ProgramManager } from './ProgramManager';
 import { AddressAutocomplete } from './AddressAutocomplete';
 import { ProxyMapImage } from './ProxyMapImage';
@@ -36,9 +37,11 @@ interface TripFormProps {
   onAddProgram: (name: string, address: string) => Promise<Program | null>;
   onUpdateProgram: (id: string, updates: { name?: string; address?: string }) => Promise<boolean>;
   onDeleteProgram: (id: string) => Promise<boolean>;
+  suggestions?: TripSuggestion[];
+  suggestionsLoading?: boolean;
 }
 
-export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading, isAdmin, onAddProgram, onUpdateProgram, onDeleteProgram }: TripFormProps) => {
+export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading, isAdmin, onAddProgram, onUpdateProgram, onDeleteProgram, suggestions = [], suggestionsLoading = false }: TripFormProps) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [fromAddress, setFromAddress] = useState('');
   const [toAddress, setToAddress] = useState('');
@@ -49,6 +52,15 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
   const [routeMapData, setRouteMapData] = useState<RouteMapData | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isRoundTrip, setIsRoundTrip] = useState(false);
+
+  const handleApplySuggestion = (suggestion: TripSuggestion) => {
+    setFromAddress(suggestion.fromAddress);
+    setToAddress(suggestion.toAddress);
+    setBusinessPurpose(suggestion.businessPurpose);
+    setMiles(0);
+    setRouteUrl('');
+    setRouteMapData(null);
+  };
 
   const handleProgramChange = (programName: string) => {
     setProgram(programName);
@@ -98,6 +110,33 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {(suggestionsLoading || suggestions.length > 0) && (
+            <div className="space-y-2">
+              <p className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" />Smart Suggestions
+              </p>
+              {suggestionsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />Loading suggestions...
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2" data-testid="suggestions-list">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleApplySuggestion(s)}
+                      className="inline-flex items-center gap-1.5 rounded-full border bg-primary/5 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      title={`From: ${s.fromAddress} → To: ${s.toAddress} (${s.businessPurpose})`}
+                    >
+                      <MapPin className="h-3 w-3 shrink-0" />
+                      <span className="max-w-[180px] truncate">{s.toAddress}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="date" className="flex items-center gap-1.5 text-sm font-medium"><Calendar className="h-3.5 w-3.5 text-muted-foreground" />Date</Label>
