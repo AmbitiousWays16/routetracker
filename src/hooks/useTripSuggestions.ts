@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { auth } from '@/lib/firebase';
 
 export interface TripSuggestion {
@@ -11,7 +11,7 @@ export const useTripSuggestions = () => {
   const [suggestions, setSuggestions] = useState<TripSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = useCallback(async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
@@ -49,11 +49,11 @@ export const useTripSuggestions = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchSuggestions();
-  }, []);
+  }, [fetchSuggestions]);
 
   return { suggestions, loading, refetch: fetchSuggestions };
 };

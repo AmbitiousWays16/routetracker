@@ -121,9 +121,9 @@ export const TripForm = ({ onSubmit, onCalculateRoute, programs, programsLoading
                 </div>
               ) : (
                 <div className="flex flex-wrap gap-2" data-testid="suggestions-list">
-                  {suggestions.map((s, i) => (
+                  {suggestions.map((s) => (
                     <button
-                      key={i}
+                      key={`${s.fromAddress}-${s.toAddress}`}
                       type="button"
                       onClick={() => handleApplySuggestion(s)}
                       className="inline-flex items-center gap-1.5 rounded-full border bg-primary/5 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
